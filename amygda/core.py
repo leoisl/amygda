@@ -410,7 +410,7 @@ class PlateMeasurement(Treant):
             self.categories.remove("IM_"+drug.upper()+"MIC")
             self.categories.remove("IM_"+drug.upper()+"DILUTION")
 
-    def measure_growth(self,threshold_pixel=130,threshold_percentage=3,region=0.4,sensitivity=4.0):
+    def measure_growth(self,threshold_pixel=130,threshold_percentage=3,region=0.4,sensitivity=4.0, c_param = 5):
         """ Analyse each of the wells and decide if there is bacterial growth.
 
         This is all based on the pixels found in a central square region.
@@ -451,21 +451,74 @@ class PlateMeasurement(Treant):
                 y=self.well_centre[(iy,ix)][1]
                 r=self.well_radii[(iy,ix)]*region
 
-                # make a circular mask
-                circular_mask=(x0-x)**2+(y0-y)**2<(r**2)
+                rect = self.image[int(y-r):int(y+r),int(x-r):int(x+r)]
 
-                # rect = self.image[int(y-r):int(y+r),int(x-r):int(x+r)]
-                rect = self.image[circular_mask]
+                # apply adaptive threshold
+                block_size = int(r)
+                if block_size % 2 == 0:
+                    block_size += 1
+                binary_image = cv2.adaptiveThreshold(rect, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                                     cv2.THRESH_BINARY,
+                                                     block_size,
+                                                     c_param)
 
-                # rect = cv2.cvtColor(rect, cv2.COLOR_BGR2GRAY)
-                rect_pixels = rect.flatten()
+                # debug printing
+                # cv2.imwrite(f"figs/well_{iy}_{ix}.0.jpg", rect)
+                # cv2.imwrite(f"figs/well_{iy}_{ix}.1.jpg", binary_image)
+
+                # # contours and hull (not needed)
+                # contours, hierarchies = cv2.findContours(binary_image, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
+                # inner_contours = []
+                # inner_hierarchy = []
+                # for contour, hierarchy in zip(contours, hierarchies[0]):
+                #     if hierarchy[-1] != -1:
+                #         inner_contours.append(contour)
+                #         inner_hierarchy.append(hierarchy)
+                #
+                #
+                # # create hull array for convex hull points
+                # hulls = []
+                # # calculate points for each contour
+                # for contour in inner_contours:
+                #     # creating convex hull object for each contour
+                #     hull = cv2.convexHull(contour, False)
+                #     hulls.append(hull)
+
+
+                # if len(all_points_in_inner_contours)>0:
+                #     epsilon = 0.01 * cv2.arcLength(contours[0], True)
+                #     approx = cv2.approxPolyDP(all_points_in_inner_contours, epsilon=epsilon, closed=True)
+
+
+                # create an empty black image
+                # vis = numpy.zeros((binary_image.shape[0], binary_image.shape[1], 3), numpy.uint8)
+                # cv2.drawContours(vis, inner_contours, -1, (138, 41, 231))
+                # cv2.imwrite(f"figs/well_{iy}_{ix}.jpg.3.jpg", vis)
+
+                # draw hull points
+                # vis = numpy.zeros((binary_image.shape[0], binary_image.shape[1], 3), numpy.uint8)
+                # cv2.drawContours(vis, hulls, -1, (138, 41, 231))
+                # cv2.imwrite(f"figs/well_{iy}_{ix}.jpg.hulls.jpg", vis)
+
+                binary_image_pixels = binary_image.flatten()
 
                 if self.pixel_intensities:
-                    for j in rect_pixels:
+                    for j in binary_image_pixels:
                         self.well_pixel_intensities[iy,ix].append(j)
 
-                # self.well_growth[iy,ix] = numpy.sum([rect_pixels<self.threshold_pixel],dtype=numpy.float64)/(rect.shape[0]*rect.shape[1])*100
-                self.well_growth[iy,ix] = numpy.sum([rect_pixels<self.threshold_pixel],dtype=numpy.float64)/(len(rect))*100
+
+                self.well_growth[iy,ix] = numpy.sum([binary_image_pixels == 0],dtype=numpy.float64)/(len(binary_image_pixels))*100
+
+
+        # Debug printing
+        # fullbinary_image = cv2.adaptiveThreshold(self.image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        #                                      cv2.THRESH_BINARY,
+        #                                      block_size,
+        #                                      c_param)
+        # cv2.imwrite(f"figs/all_wells.jpg", fullbinary_image)
+        #
+        # print("Well growth in percentage:")
+        # print(self.well_growth)
 
         counter=1
         positive_control_growth_total=0.0
