@@ -410,7 +410,153 @@ class PlateMeasurement(Treant):
             self.categories.remove("IM_"+drug.upper()+"MIC")
             self.categories.remove("IM_"+drug.upper()+"DILUTION")
 
-    def measure_growth(self,threshold_pixel=130,threshold_percentage=3,region=0.4,sensitivity=4.0, c_param = 5):
+    def print_contours(self, image, background_image, filename):
+        # transform bg image to BGR to draw with colours
+        background_image = cv2.cvtColor(background_image, cv2.COLOR_GRAY2BGR)
+
+        # contours and hull (not needed)
+        contours, hierarchies = cv2.findContours(image, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
+        inner_contours = []
+        outer_contours = []
+        contours_area = []
+        for contour, hierarchy in zip(contours, hierarchies[0]):
+            if hierarchy[-1] != -1:
+                inner_contours.append(contour)
+            else:
+                outer_contours.append(contour)
+            contours_area.append(cv2.contourArea(contour))
+
+
+        vis = background_image.copy()
+        cv2.drawContours(vis, contours, -1, (138, 41, 231))
+        cv2.imwrite(f"{filename}.full_countours.jpg", vis)
+        vis = background_image.copy()
+        cv2.drawContours(vis, inner_contours, -1, (138, 41, 231))
+        cv2.imwrite(f"{filename}.inner_contours.jpg", vis)
+        vis = background_image.copy()
+        cv2.drawContours(vis, outer_contours, -1, (138, 41, 231))
+        cv2.imwrite(f"{filename}.outer_contours.jpg", vis)
+        vis = background_image.copy()
+        cv2.drawContours(vis, outer_contours, -1, (138, 41, 231))
+        cv2.drawContours(vis, inner_contours, -1, (119,158,27))
+        cv2.imwrite(f"{filename}.inner_outer_contours.jpg", vis)
+
+        area_of_the_second_largest_contour = sorted(contours_area, reverse=True)[1]
+        second_largest_contour = [contour for contour, contour_area in zip(contours, contours_area) if
+                                  contour_area == area_of_the_second_largest_contour][0]
+        second_largest_hull = cv2.convexHull(second_largest_contour, False)
+        second_largest_hull_area = cv2.contourArea(second_largest_hull)
+
+        area_of_the_third_largest_contour = sorted(contours_area, reverse=True)[2]
+        third_largest_contour = [contour for contour, contour_area in zip(contours, contours_area) if
+                                  contour_area == area_of_the_third_largest_contour][0]
+        third_largest_hull = cv2.convexHull(third_largest_contour, False)
+        third_largest_hull_area = cv2.contourArea(third_largest_hull)
+
+        vis = background_image.copy()
+        cv2.drawContours(vis, [second_largest_contour], -1, (138, 41, 231))
+        cv2.drawContours(vis, [third_largest_contour], -1, (119,158,27))
+        cv2.imwrite(f"{filename}.second_and_third_largest_contour.jpg", vis)
+
+        vis = background_image.copy()
+        cv2.drawContours(vis, [second_largest_hull], -1, (138, 41, 231))
+        cv2.drawContours(vis, [third_largest_hull], -1, (119,158,27))
+        cv2.imwrite(f"{filename}.second_and_third_largest_hull.jpg", vis)
+
+        big_difference_in_area = third_largest_hull_area < 0.40 * second_largest_hull_area
+
+        vis = background_image.copy()
+        if big_difference_in_area:
+            cv2.drawContours(vis, [second_largest_hull], -1, (138, 41, 231))
+        else:
+            cv2.drawContours(vis, [third_largest_hull], -1, (119,158,27))
+        cv2.imwrite(f"{filename}.chosen_hull.jpg", vis)
+
+
+        # create hull array for convex hull points
+        hulls = []
+        hulls_area = []
+        # calculate points for each contour
+        for contour in outer_contours:
+            # creating convex hull object for each contour
+            hull = cv2.convexHull(contour, False)
+            hull_area = cv2.contourArea(hull)
+            hulls.append(hull)
+            hulls_area.append(hull_area)
+        vis = background_image.copy()
+        cv2.drawContours(vis, hulls, -1, (138, 41, 231))
+        cv2.imwrite(f"{filename}.hulls.jpg", vis)
+
+        max_points_in_hull = max([len(hull) for hull in hulls])
+        largest_area = max(hulls_area)
+        hull_with_largest_points = [hull for hull in hulls if len(hull) == max_points_in_hull]
+        hull_with_largest_area = [hull for hull, hulls_area in zip(hulls, hulls_area) if hulls_area == largest_area]
+        vis = background_image.copy()
+        cv2.drawContours(vis, hull_with_largest_points, -1, (138, 41, 231))
+        cv2.imwrite(f"{filename}.hull_with_most_points.jpg", vis)
+        vis = background_image.copy()
+        cv2.drawContours(vis, hull_with_largest_area, -1, (138, 41, 231))
+        cv2.imwrite(f"{filename}.largest_hull.jpg", vis)
+
+        area_of_the_second_largest_hull = sorted(hulls_area, reverse=True)[:1][-1]
+        second_largest_hull = [hull for hull, hull_area in zip(hulls, hulls_area) if
+                                  hull_area == area_of_the_second_largest_hull]
+        area_of_the_third_largest_hull = sorted(hulls_area, reverse=True)[:2][-1]
+        third_largest_hull = [hull for hull, hull_area in zip(hulls, hulls_area) if
+                               hull_area == area_of_the_third_largest_hull]
+
+
+
+        mask = numpy.zeros(image.shape, dtype='uint8')
+        mask = cv2.drawContours(mask, hull_with_largest_points, -1, (255, 255, 255), thickness=cv2.FILLED)
+        # img2gray = cv2.bitwise_not(mask)
+        # img2gray = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+        ret, mask = cv2.threshold(mask, 10, 255, cv2.THRESH_BINARY)
+        result = cv2.bitwise_and(background_image, background_image, mask=mask)
+        result = numpy.where(result == 0, 255, result)
+        cv2.imwrite(f"{filename}.hull_with_most_points_cropped.jpg", result)
+
+        mask = numpy.zeros(image.shape, dtype='uint8')
+        mask = cv2.drawContours(mask, hull_with_largest_area, -1, (255, 255, 255), thickness=cv2.FILLED)
+        # img2gray = cv2.bitwise_not(mask)
+        # img2gray = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+        ret, mask = cv2.threshold(mask, 10, 255, cv2.THRESH_BINARY)
+        result = cv2.bitwise_and(background_image, background_image, mask=mask)
+        result = numpy.where(result == 0, 255, result)
+        cv2.imwrite(f"{filename}.largest_hull_cropped.jpg", result)
+
+        # epsilon = 0.1 * cv2.arcLength(hull_with_largest_points, True)
+        # hull_with_largest_points_approximated = cv2.approxPolyDP(hull_with_largest_points, epsilon, True)
+        # vis = background_image.copy()
+        # cv2.drawContours(vis, [hull_with_largest_points_approximated], -1, (138, 41, 231))
+        # cv2.imwrite(f"{filename}.largest_hull_approximated.jpg", vis)
+
+
+        approx=[]
+        for contour in outer_contours:
+            epsilon = 0.01 * cv2.arcLength(contour, True)
+            approx.append(cv2.approxPolyDP(contour, epsilon, True))
+        vis = background_image.copy()
+        cv2.drawContours(vis, approx, -1, (138, 41, 231))
+        cv2.drawContours(vis, inner_contours, -1, (119, 158, 27))
+        cv2.imwrite(f"{filename}.full_countours.approx.jpg", vis)
+
+
+    def get_largest_region_not_having_big_circle(self):
+        pass
+        # # identifies circles
+        # radius = self.well_radii[(iy, ix)]
+        # circles = cv2.HoughCircles(binary_image, cv2.HOUGH_GRADIENT, 1, 50, param1=20, param2=25,
+        #                            minRadius=int(0.5 * radius),
+        #                            maxRadius=int(10 * radius))
+        # assert len(circles) == 1
+        # print(f"Identified the circle: {circles}")
+        #
+        # # make a circular mask
+        # (y0, x0) = numpy.mgrid[:binary_image.shape[0], :binary_image.shape[1]]
+        # circular_mask = (x0 - circles[0][0]) ** 2 + (y0 - circles[0][1]) ** 2 < (circles[0][2] ** 2)
+
+    def measure_growth(self,threshold_pixel=130,threshold_percentage=3,region=0.4,sensitivity=4.0, c_param = 0):
         """ Analyse each of the wells and decide if there is bacterial growth.
 
         This is all based on the pixels found in a central square region.
@@ -442,16 +588,21 @@ class PlateMeasurement(Treant):
         self.threshold_percentage=threshold_percentage
         self.sensitivity=sensitivity
 
-        (y0,x0)=numpy.ogrid[:self.image.shape[0],:self.image.shape[1]]
-
         for iy in range(0,self.well_dimensions[0]):
             for ix in range(0,self.well_dimensions[1]):
 
                 x=self.well_centre[(iy,ix)][0]
                 y=self.well_centre[(iy,ix)][1]
-                r=self.well_radii[(iy,ix)]*region
+                r=self.well_radii[(iy,ix)]
 
-                rect = self.image[int(y-r):int(y+r),int(x-r):int(x+r)]
+                max_y = self.image.shape[0]
+                max_x = self.image.shape[1]
+
+                rect = self.image[max(0, int(y-r)):min(int(y+r), max_y),
+                                  max(0, int(x-r)):min(int(x+r), max_x)]
+
+                # mean_background = rect[0:5, 0:5].flatten().mean()
+                # rect = numpy.where(rect < mean_background - 10, rect, 0)
 
                 # apply adaptive threshold
                 block_size = int(r)
@@ -462,18 +613,48 @@ class PlateMeasurement(Treant):
                                                      block_size,
                                                      c_param)
 
-                # debug printing
-                # cv2.imwrite(f"figs/well_{iy}_{ix}.0.jpg", rect)
-                # cv2.imwrite(f"figs/well_{iy}_{ix}.1.jpg", binary_image)
 
-                # # contours and hull (not needed)
-                # contours, hierarchies = cv2.findContours(binary_image, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
-                # inner_contours = []
-                # inner_hierarchy = []
-                # for contour, hierarchy in zip(contours, hierarchies[0]):
-                #     if hierarchy[-1] != -1:
-                #         inner_contours.append(contour)
-                #         inner_hierarchy.append(hierarchy)
+
+                #get the largest region not having a big circle
+                # self.get_largest_region_not_having_big_circle(r, binary_image)
+
+                # debug printing
+                cv2.imwrite(f"figs/well_{iy}_{ix}.0.jpg", rect)
+                cv2.imwrite(f"figs/well_{iy}_{ix}.1.jpg", binary_image)
+                self.print_contours(binary_image, rect, f"figs/well_{iy}_{ix}")
+
+                cropped_image = cv2.imread(f"figs/well_{iy}_{ix}.largest_hull_cropped.jpg")
+                cropped_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
+
+                padding_column_matrix = numpy.array([255] * (5*cropped_image.shape[0]))
+                padding_column_matrix = padding_column_matrix.reshape((cropped_image.shape[0], 5))
+                stacked_cropped_image = numpy.hstack((padding_column_matrix, cropped_image, padding_column_matrix))
+                padding_row_matrix = numpy.array([255] * (5 * stacked_cropped_image.shape[1]))
+                padding_row_matrix = padding_row_matrix.reshape((5, stacked_cropped_image.shape[1]))
+                stacked_cropped_image = numpy.vstack((padding_row_matrix, stacked_cropped_image, padding_row_matrix))
+                cropped_image = numpy.uint8(stacked_cropped_image)
+
+                new_block_size = int(block_size)
+                if new_block_size % 2 == 0:
+                    new_block_size+=1
+                cropped_binary_image = cv2.adaptiveThreshold(cropped_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                                     cv2.THRESH_BINARY,
+                                                     new_block_size,
+                                                     10)
+
+
+                cv2.imwrite(f"figs/well_{iy}_{ix}_cropped.0.jpg", cropped_image)
+                cv2.imwrite(f"figs/well_{iy}_{ix}_cropped.binary.jpg", cropped_binary_image)
+                self.print_contours(cropped_binary_image, cropped_image, f"figs/well_{iy}_{ix}_croped")
+
+                # contours and hull (not needed)
+                contours, hierarchies = cv2.findContours(binary_image, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
+                inner_contours = []
+                inner_hierarchy = []
+                for contour, hierarchy in zip(contours, hierarchies[0]):
+                    if hierarchy[-1] != -1:
+                        inner_contours.append(contour)
+                        inner_hierarchy.append(hierarchy)
                 #
                 #
                 # # create hull array for convex hull points
@@ -491,9 +672,9 @@ class PlateMeasurement(Treant):
 
 
                 # create an empty black image
-                # vis = numpy.zeros((binary_image.shape[0], binary_image.shape[1], 3), numpy.uint8)
-                # cv2.drawContours(vis, inner_contours, -1, (138, 41, 231))
-                # cv2.imwrite(f"figs/well_{iy}_{ix}.jpg.3.jpg", vis)
+                vis = numpy.zeros((binary_image.shape[0], binary_image.shape[1], 3), numpy.uint8)
+                cv2.drawContours(vis, contours, -1, (138, 41, 231))
+                cv2.imwrite(f"figs/well_{iy}_{ix}.jpg.2.jpg", vis)
 
                 # draw hull points
                 # vis = numpy.zeros((binary_image.shape[0], binary_image.shape[1], 3), numpy.uint8)
@@ -511,11 +692,15 @@ class PlateMeasurement(Treant):
 
 
         # Debug printing
-        # fullbinary_image = cv2.adaptiveThreshold(self.image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        #                                      cv2.THRESH_BINARY,
-        #                                      block_size,
-        #                                      c_param)
-        # cv2.imwrite(f"figs/all_wells.jpg", fullbinary_image)
+        fullbinary_image = cv2.adaptiveThreshold(self.image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                             cv2.THRESH_BINARY,
+                                             block_size,
+                                             c_param)
+        cv2.imwrite(f"figs/all_wells.jpg", fullbinary_image)
+
+
+
+
         #
         # print("Well growth in percentage:")
         # print(self.well_growth)
