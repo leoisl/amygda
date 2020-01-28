@@ -410,129 +410,90 @@ class PlateMeasurement(Treant):
             self.categories.remove("IM_"+drug.upper()+"MIC")
             self.categories.remove("IM_"+drug.upper()+"DILUTION")
 
-    def print_contours(self, image, background_image, filename):
-        # transform bg image to BGR to draw with colours
-        background_image = cv2.cvtColor(background_image, cv2.COLOR_GRAY2BGR)
-
-        # contours and hull (not needed)
-        contours, hierarchies = cv2.findContours(image, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
-        inner_contours = []
-        outer_contours = []
-        contours_area = []
-        for contour, hierarchy in zip(contours, hierarchies[0]):
-            if hierarchy[-1] != -1:
-                inner_contours.append(contour)
-            else:
-                outer_contours.append(contour)
-            contours_area.append(cv2.contourArea(contour))
-
-
-        vis = background_image.copy()
-        cv2.drawContours(vis, contours, -1, (138, 41, 231))
-        cv2.imwrite(f"{filename}.full_countours.png", vis)
-        # vis = background_image.copy()
-        # cv2.drawContours(vis, inner_contours, -1, (138, 41, 231))
-        # cv2.imwrite(f"{filename}.inner_contours.png", vis)
-        # vis = background_image.copy()
-        # cv2.drawContours(vis, outer_contours, -1, (138, 41, 231))
-        # cv2.imwrite(f"{filename}.outer_contours.png", vis)
-        # vis = background_image.copy()
-        # cv2.drawContours(vis, outer_contours, -1, (138, 41, 231))
-        # cv2.drawContours(vis, inner_contours, -1, (119,158,27))
-        # cv2.imwrite(f"{filename}.inner_outer_contours.png", vis)
-
-        largest_contour_area = sorted(contours_area, reverse=True)[0]
-        largest_contour = [contour for contour, contour_area in zip(contours, contours_area) if
-                                  contour_area == largest_contour_area][0]
-        # vis = background_image.copy()
-        # cv2.drawContours(vis, [largest_contour], -1, (138, 41, 231))
-        # cv2.imwrite(f"{filename}.largest_contour.png", vis)
-
-        area_of_the_second_largest_contour = sorted(contours_area, reverse=True)[1]
-        second_largest_contour = [contour for contour, contour_area in zip(contours, contours_area) if
-                                  contour_area == area_of_the_second_largest_contour][0]
-        second_largest_hull = cv2.convexHull(second_largest_contour, False)
-        second_largest_hull_area = cv2.contourArea(second_largest_hull)
-
-        area_of_the_third_largest_contour = sorted(contours_area, reverse=True)[2]
-        third_largest_contour = [contour for contour, contour_area in zip(contours, contours_area) if
-                                  contour_area == area_of_the_third_largest_contour][0]
-        third_largest_hull = cv2.convexHull(third_largest_contour, False)
-        third_largest_hull_area = cv2.contourArea(third_largest_hull)
-
-        # vis = background_image.copy()
-        # cv2.drawContours(vis, [second_largest_contour], -1, (138, 41, 231))
-        # cv2.drawContours(vis, [third_largest_contour], -1, (119,158,27))
-        # cv2.imwrite(f"{filename}.second_and_third_largest_contour.png", vis)
-
-        vis = background_image.copy()
-        cv2.drawContours(vis, [second_largest_hull], -1, (0, 0, 255))
-        cv2.drawContours(vis, [third_largest_hull], -1, (0,255,0))
-        cv2.imwrite(f"{filename}.second_and_third_largest_hull.png", vis)
-
-        big_difference_in_area = third_largest_hull_area < 0.40 * second_largest_hull_area
-
-        vis = background_image.copy()
-        if big_difference_in_area:
-            cv2.drawContours(vis, [second_largest_hull], -1, (0, 255, 0))
-            cv2.drawContours(vis, [third_largest_hull], -1, (0, 0, 255))
-        else:
-            cv2.drawContours(vis, [third_largest_hull], -1, (0, 255, 0))
-            cv2.drawContours(vis, [second_largest_hull], -1, (0, 0, 255))
-        cv2.imwrite(f"{filename}.chosen_hull.png", vis)
-
-
-        # create hull array for convex hull points
-        hulls = []
-        hulls_area = []
-        # calculate points for each contour
-        for contour in outer_contours:
-            # creating convex hull object for each contour
-            hull = cv2.convexHull(contour, False)
-            hull_area = cv2.contourArea(hull)
-            hulls.append(hull)
-            hulls_area.append(hull_area)
-        # vis = background_image.copy()
-        # cv2.drawContours(vis, hulls, -1, (138, 41, 231))
-        # cv2.imwrite(f"{filename}.hulls.png", vis)
-
-        max_points_in_hull = max([len(hull) for hull in hulls])
-        largest_area = max(hulls_area)
-        hull_with_largest_points = [hull for hull in hulls if len(hull) == max_points_in_hull]
-        hull_with_largest_area = [hull for hull, hulls_area in zip(hulls, hulls_area) if hulls_area == largest_area]
-        # vis = background_image.copy()
-        # cv2.drawContours(vis, hull_with_largest_points, -1, (138, 41, 231))
-        # cv2.imwrite(f"{filename}.hull_with_most_points.png", vis)
-        # vis = background_image.copy()
-        # cv2.drawContours(vis, hull_with_largest_area, -1, (138, 41, 231))
-        # cv2.imwrite(f"{filename}.largest_hull.png", vis)
-
-
+    def crop_based_on_hull(self, image, background_image, filename, hull):
         mask = numpy.zeros(image.shape, dtype='uint8')
-        mask = cv2.drawContours(mask, [third_largest_hull], -1, (255, 255, 255), thickness=cv2.FILLED)
+        mask = cv2.drawContours(mask, [hull], -1, (255, 255, 255), thickness=cv2.FILLED)
         cv2.imwrite(f"{filename}.mask.png", mask)
         # img2gray = cv2.bitwise_not(mask)
         # img2gray = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
         ret, mask = cv2.threshold(mask, 10, 255, cv2.THRESH_BINARY)
         result = cv2.bitwise_and(background_image, background_image, mask=mask)
         result = numpy.where(result == 0, 255, result)
-        cv2.imwrite(f"{filename}.largest_hull_cropped.png", result)
+        cv2.imwrite(filename, result)
 
-        # epsilon = 0.1 * cv2.arcLength(hull_with_largest_points, True)
-        # hull_with_largest_points_approximated = cv2.approxPolyDP(hull_with_largest_points, epsilon, True)
-        # vis = background_image.copy()
-        # cv2.drawContours(vis, [hull_with_largest_points_approximated], -1, (138, 41, 231))
-        # cv2.imwrite(f"{filename}.largest_hull_approximated.png", vis)
+    def get_countours(self, image):
+        contours, hierarchies = cv2.findContours(image, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
+        inner_contours = []
+        outer_contours = []
+        for contour, hierarchy in zip(contours, hierarchies[0]):
+            if hierarchy[-1] != -1:
+                inner_contours.append(contour)
+            else:
+                outer_contours.append(contour)
 
 
-        # approx=[]
-        # for contour in outer_contours:
-        #     epsilon = 0.01 * cv2.arcLength(contour, True)
-        #     approx.append(cv2.approxPolyDP(contour, epsilon, True))
-        # vis = background_image.copy()
-        # cv2.drawContours(vis, approx, -1, (138, 41, 231))
-        # cv2.drawContours(vis, inner_contours, -1, (119, 158, 27))
-        # cv2.imwrite(f"{filename}.full_countours.approx.png", vis)
+        return contours, inner_contours, outer_contours
+
+    def get_nth_largest_countour_and_its_area(self, contours, n):
+        contours_area = [cv2.contourArea(contour) for contour in contours]
+        contours_area = sorted(contours_area, reverse=True)
+        nth_largest_contours_area = contours_area[n]
+        nth_largest_contour = [contour for contour, contour_area in zip(contours, contours_area) if
+                           cv2.contourArea(contour) == nth_largest_contours_area][0]
+        return nth_largest_contour, nth_largest_contours_area
+
+
+
+    def draw_contours(self, background_image, contours, filename, colors=((0, 255, 0), (0, 0, 255), (255, 0, 0))):
+        vis = background_image.copy()
+        for contour, color in zip(contours, colors):
+            cv2.drawContours(vis, contour, -1, color)
+        cv2.imwrite(filename, vis)
+
+    def get_hull_and_area_from_contour(self, contour):
+        hull = cv2.convexHull(contour, False)
+        hull_area = cv2.contourArea(hull)
+        return hull, hull_area
+
+
+    def find_and_save_contours_and_check_if_we_have_a_good_choice(self, image, background_image, filename):
+        # transform bg image to BGR to draw with colours
+        background_image = cv2.cvtColor(background_image, cv2.COLOR_GRAY2BGR)
+
+        contours, inner_contours, outer_contours = self.get_countours(image)
+
+        self.draw_contours(background_image, [contours], f"{filename}.full_countours.png")
+        self.draw_contours(background_image, [inner_contours], f"{filename}.inner_contours.png")
+        self.draw_contours(background_image, [outer_contours], f"{filename}.outer_contours.png")
+        self.draw_contours(background_image, [inner_contours, outer_contours], f"{filename}.inner_outer_contours.png")
+
+        second_largest_contour, area_of_the_second_largest_contour = \
+            self.get_nth_largest_countour_and_its_area(contours, 1)
+        third_largest_contour, area_of_the_third_largest_contour = \
+            self.get_nth_largest_countour_and_its_area(contours, 2)
+
+        self.draw_contours(background_image, [second_largest_contour, third_largest_contour], f"{filename}.second_and_third_largest_contour.png")
+
+        second_largest_hull, area_of_the_second_largest_hull = \
+            self.get_hull_and_area_from_contour(second_largest_contour)
+        third_largest_hull, area_of_the_third_largest_hull = \
+            self.get_hull_and_area_from_contour(third_largest_contour)
+
+        self.draw_contours(background_image, [[second_largest_hull], [third_largest_hull]], f"{filename}.second_and_third_largest_hulls.png")
+
+        self.crop_based_on_hull(image, background_image, f"{filename}.third_largest_hull_cropped.png", third_largest_hull)
+
+        big_difference_in_area = area_of_the_third_largest_hull < 0.4 * area_of_the_second_largest_hull
+
+        if big_difference_in_area:
+            self.draw_contours(background_image, [[second_largest_hull], [third_largest_hull]],
+                               f"{filename}.chosen_hull.png")
+        else:
+            self.draw_contours(background_image, [[third_largest_hull], [second_largest_hull]],
+                               f"{filename}.chosen_hull.png")
+
+        good_choice = not big_difference_in_area
+        return good_choice
 
 
     @staticmethod
@@ -635,22 +596,28 @@ class PlateMeasurement(Treant):
                 # debug printing
                 cv2.imwrite(f"figs/well_{iy}_{ix}.0.raw.png", rect)
                 cv2.imwrite(f"figs/well_{iy}_{ix}.1.binary.png", binary_image)
-                self.print_contours(binary_image, rect_without_circles, f"figs/well_{iy}_{ix}")
+                self.find_and_save_contours_and_check_if_we_have_a_good_choice(binary_image,
+                                                                               rect_without_circles,
+                                                                               f"figs/well_{iy}_{ix}")
 
 
+                for variable_c_param in range(c_param, 0, -1):
+                    cropped_image = cv2.imread(f"figs/well_{iy}_{ix}.third_largest_hull_cropped.png")
+                    cropped_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
+                    cropped_binary_image = cv2.adaptiveThreshold(cropped_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                                         cv2.THRESH_BINARY,
+                                                         block_size,
+                                                         variable_c_param)
 
 
-                cropped_image = cv2.imread(f"figs/well_{iy}_{ix}.largest_hull_cropped.png")
-                cropped_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
-                cropped_binary_image = cv2.adaptiveThreshold(cropped_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                                     cv2.THRESH_BINARY,
-                                                     block_size,
-                                                     10)
+                    cv2.imwrite(f"figs/well_{iy}_{ix}_cropped.0.png", cropped_image)
+                    cv2.imwrite(f"figs/well_{iy}_{ix}_cropped.binary.png", cropped_binary_image)
+                    good_choice = self.find_and_save_contours_and_check_if_we_have_a_good_choice(cropped_binary_image, rect_without_circles, f"figs/well_{iy}_{ix}_croped")
+
+                    if good_choice:
+                        break
 
 
-                cv2.imwrite(f"figs/well_{iy}_{ix}_cropped.0.png", cropped_image)
-                cv2.imwrite(f"figs/well_{iy}_{ix}_cropped.binary.png", cropped_binary_image)
-                self.print_contours(cropped_binary_image, rect_without_circles, f"figs/well_{iy}_{ix}_croped")
 
                 binary_image_pixels = binary_image.flatten()
 
