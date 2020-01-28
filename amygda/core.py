@@ -546,7 +546,6 @@ class PlateMeasurement(Treant):
         if good_choice and output_plot:
             fig, ax1 = plt.subplots()
             ax2 = fig.add_axes([0.05, 0.6, 0.2, 0.2])
-
             raw_image = plt.imread(f'{filename.replace("_cropped", ".0.raw.png")}')
             raw_image = cv2.cvtColor(raw_image, cv2.COLOR_GRAY2BGR)
             ax1.hist(distances, bins=range(0, int(max(distances))+1))
@@ -554,6 +553,23 @@ class PlateMeasurement(Treant):
             ax2.axis("off")
             plt.savefig(f'{filename}.histogram.png')
             plt.close()
+
+            fig, ax1 = plt.subplots()
+            ax2 = fig.add_axes([0.05, 0.6, 0.2, 0.2])
+            third_largest_hull_cropped_raw_image = cv2.imread(f'{filename.replace("_cropped", "_cropped.third_largest_hull_cropped.png")}')
+            third_largest_hull_cropped_raw_image = cv2.cvtColor(third_largest_hull_cropped_raw_image,
+                                                                cv2.COLOR_BGR2GRAY)
+            third_largest_hull_cropped_raw_image = numpy.where(third_largest_hull_cropped_raw_image == 255, 0, third_largest_hull_cropped_raw_image)
+            raw_pixels = third_largest_hull_cropped_raw_image.flatten()
+            raw_pixels = raw_pixels[raw_pixels>0]
+            ax1.hist(raw_pixels, bins=range(0, 255))
+            third_largest_hull_cropped_raw_image = cv2.cvtColor(third_largest_hull_cropped_raw_image,
+                                                                cv2.COLOR_GRAY2BGR)
+            ax2.imshow(third_largest_hull_cropped_raw_image)
+            ax2.axis("off")
+            plt.savefig(f'{filename}.third_largest_hull_cropped_raw_image_histogram.png')
+            plt.close()
+
 
         return good_choice, appropriate_hull
 
@@ -666,6 +682,18 @@ class PlateMeasurement(Treant):
                 for variable_c_param in range(c_param, 0, -1):
                     cropped_image = cv2.imread(f"{self.debug_images}well_{iy}_{ix}.third_largest_hull_cropped.png")
                     cropped_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
+
+                    cropped_image_flattened = cropped_image.flatten()
+                    cropped_image_flattened = cropped_image_flattened[5 < cropped_image_flattened]
+                    cropped_image_flattened = cropped_image_flattened[cropped_image_flattened < 250]
+                    mean = cropped_image_flattened.mean()
+
+
+                    for i  in range(cropped_image.shape[0]):
+                        for j in range(cropped_image.shape[1]):
+                            if 200 < cropped_image[i][j] < 250:
+                                cv2.circle(cropped_image, (i, j), 5, mean, -1)
+
                     cropped_binary_image = cv2.adaptiveThreshold(cropped_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                                          cv2.THRESH_BINARY,
                                                          block_size,
