@@ -116,3 +116,5 @@ ENV/
 \.idea/
 
 Pipfile\.lock
+
+examples/
