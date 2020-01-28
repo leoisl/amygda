@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 from datreant import Treant
 import math
 
+import os
+
 class PlateMeasurement(Treant):
 
     """ The PlateMeasurement class is a Treant for storing and analysing a
@@ -46,6 +48,10 @@ class PlateMeasurement(Treant):
 
         # remember whether we will be analysing and keeping the pixel intensities etc
         self.pixel_intensities=pixel_intensities
+
+        self.debug_images = f"{self.abspath}/debug_images/"
+
+        os.makedirs(self.debug_images, exist_ok=True)
 
     def load_image(self,file_ending):
         """ Load and store the image and its dimensions, then initialise a series of arrays to record the results
@@ -607,7 +613,7 @@ class PlateMeasurement(Treant):
         #
         #         # draw the circle before
         #         cv2.circle(self.image, (int(x), int(y)), int(r), 0, thickness=5)
-        # cv2.imwrite(f"figs/all_wells_with_circle.png", self.image)
+        # cv2.imwrite(f"{self.debug_images}all_wells_with_circle.png", self.image)
 
 
 
@@ -650,15 +656,15 @@ class PlateMeasurement(Treant):
 
 
                 # debug printing
-                cv2.imwrite(f"figs/well_{iy}_{ix}.0.raw.png", original_raw_image)
-                cv2.imwrite(f"figs/well_{iy}_{ix}.1.binary.png", binary_image)
+                cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}.0.raw.png", original_raw_image)
+                cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}.1.binary.png", binary_image)
                 self.find_contours_and_return_appropriate_hull(binary_image,
                                                                rect_without_circles,
-                                                                               f"figs/well_{iy}_{ix}")
+                                                                               f"{self.debug_images}well_{iy}_{ix}")
 
 
                 for variable_c_param in range(c_param, 0, -1):
-                    cropped_image = cv2.imread(f"figs/well_{iy}_{ix}.third_largest_hull_cropped.png")
+                    cropped_image = cv2.imread(f"{self.debug_images}well_{iy}_{ix}.third_largest_hull_cropped.png")
                     cropped_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
                     cropped_binary_image = cv2.adaptiveThreshold(cropped_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                                          cv2.THRESH_BINARY,
@@ -666,9 +672,9 @@ class PlateMeasurement(Treant):
                                                          variable_c_param)
 
 
-                    cv2.imwrite(f"figs/well_{iy}_{ix}_cropped.0.png", cropped_image)
-                    cv2.imwrite(f"figs/well_{iy}_{ix}_cropped.binary.png", cropped_binary_image)
-                    good_choice, appropriate_hull = self.find_contours_and_return_appropriate_hull(cropped_binary_image, rect_without_circles, f"figs/well_{iy}_{ix}_cropped", output_plot=True)
+                    cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.0.png", cropped_image)
+                    cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.binary.png", cropped_binary_image)
+                    good_choice, appropriate_hull = self.find_contours_and_return_appropriate_hull(cropped_binary_image, rect_without_circles, f"{self.debug_images}well_{iy}_{ix}_cropped", output_plot=True)
 
                     if good_choice:
                         break
@@ -687,7 +693,7 @@ class PlateMeasurement(Treant):
         #                                      cv2.THRESH_BINARY,
         #                                      block_size,
         #                                      c_param)
-        # cv2.imwrite(f"figs/all_wells.png", fullbinary_image)
+        # cv2.imwrite(f"{self.debug_images}all_wells.png", fullbinary_image)
 
 
 
