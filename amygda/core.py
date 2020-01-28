@@ -7,6 +7,7 @@ from scipy import stats
 import matplotlib.pyplot as plt
 
 from datreant import Treant
+import math
 
 class PlateMeasurement(Treant):
 
@@ -421,6 +422,26 @@ class PlateMeasurement(Treant):
         result = numpy.where(result == 0, 255, result)
         cv2.imwrite(filename, result)
 
+    def crop_based_on_hull_to_get_growth(self, image, background_image, filename, hull):
+        background_image = cv2.bitwise_not(background_image)
+        mask = numpy.zeros(image.shape, dtype='uint8')
+        mask = cv2.drawContours(mask, [hull], -1, (255, 255, 255), thickness=cv2.FILLED)
+        cv2.imwrite(f"{filename}.mask.png", mask)
+        # img2gray = cv2.bitwise_not(mask)
+        # img2gray = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+        ret, mask = cv2.threshold(mask, 10, 255, cv2.THRESH_BINARY)
+        result = cv2.bitwise_and(background_image, background_image, mask=mask)
+        result = cv2.bitwise_not(result)
+        cv2.imwrite(filename, result)
+
+        result_with_color = cv2.cvtColor(result, cv2.COLOR_GRAY2BGR)
+        cv2.drawContours(result_with_color, [hull], -1, (0,255,0))
+        cv2.imwrite(f"{filename}.with_contour.png", result_with_color)
+
+        return result
+
+
+
     def get_countours(self, image):
         contours, hierarchies = cv2.findContours(image, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
         inner_contours = []
@@ -455,8 +476,13 @@ class PlateMeasurement(Treant):
         hull_area = cv2.contourArea(hull)
         return hull, hull_area
 
+    def get_center_of_contour(self, contour):
+        M = cv2.moments(contour)
+        cx = int(M['m10'] / M['m00'])
+        cy = int(M['m01'] / M['m00'])
+        return cx, cy
 
-    def find_and_save_contours_and_check_if_we_have_a_good_choice(self, image, background_image, filename):
+    def find_contours_and_return_appropriate_hull(self, image, background_image, filename, output_plot=False):
         # transform bg image to BGR to draw with colours
         background_image = cv2.cvtColor(background_image, cv2.COLOR_GRAY2BGR)
 
@@ -486,14 +512,44 @@ class PlateMeasurement(Treant):
         big_difference_in_area = area_of_the_third_largest_hull < 0.4 * area_of_the_second_largest_hull
 
         if big_difference_in_area:
+            appropriate_hull = second_largest_hull
             self.draw_contours(background_image, [[second_largest_hull], [third_largest_hull]],
-                               f"{filename}.chosen_hull.png")
+                               f"{filename}.options_hulls.png")
         else:
+            appropriate_hull = third_largest_hull
             self.draw_contours(background_image, [[third_largest_hull], [second_largest_hull]],
-                               f"{filename}.chosen_hull.png")
+                               f"{filename}.options_hulls.png")
+
+        appropriate_hull_image = self.crop_based_on_hull_to_get_growth(image, image, f"{filename}.chosen_hull.binary.png", appropriate_hull)
+
+        x_center_of_appropriate_hull, y_center_of_appropriate_hull = self.get_center_of_contour(appropriate_hull)
+        # cv2.circle(appropriate_hull_image, (int(center_of_appropriate_hull[0]), int(center_of_appropriate_hull[1])), int(3), 0, thickness=-1)
+        # cv2.imwrite(f"{filename}.chosen_hull.binary.with_center.png", appropriate_hull_image)
+
+        distances = []
+        for y_coordinate in range(appropriate_hull_image.shape[0]):
+            for x_coordinate in range(appropriate_hull_image.shape[1]):
+                point_is_black = appropriate_hull_image[y_coordinate][x_coordinate] == 0
+                if point_is_black:
+                    distance = math.sqrt((x_coordinate - x_center_of_appropriate_hull)**2 +
+                                         (y_coordinate - y_center_of_appropriate_hull)**2)
+                    distances.append(distance)
 
         good_choice = not big_difference_in_area
-        return good_choice
+
+        if good_choice and output_plot:
+            fig, ax1 = plt.subplots()
+            ax2 = fig.add_axes([0.05, 0.6, 0.2, 0.2])
+
+            raw_image = plt.imread(f'{filename.replace("_cropped", ".0.raw.png")}')
+            raw_image = cv2.cvtColor(raw_image, cv2.COLOR_GRAY2BGR)
+            ax1.hist(distances, bins=range(0, int(max(distances))+1))
+            ax2.imshow(raw_image)
+            ax2.axis("off")
+            plt.savefig(f'{filename}.histogram.png')
+            plt.close()
+
+        return good_choice, appropriate_hull
 
 
     @staticmethod
@@ -565,12 +621,12 @@ class PlateMeasurement(Treant):
                 max_y = self.image.shape[0]
                 max_x = self.image.shape[1]
 
-                rect = self.image[max(0, int(y-r)):min(int(y+r), max_y),
+                original_raw_image = self.image[max(0, int(y-r)):min(int(y+r), max_y),
                                   max(0, int(x-r)):min(int(x+r), max_x)]
 
 
                 # pad the image
-                rect = self.pad_image(rect)
+                rect = self.pad_image(original_raw_image)
 
                 rect_without_circles = rect.copy()
 
@@ -594,10 +650,10 @@ class PlateMeasurement(Treant):
 
 
                 # debug printing
-                cv2.imwrite(f"figs/well_{iy}_{ix}.0.raw.png", rect)
+                cv2.imwrite(f"figs/well_{iy}_{ix}.0.raw.png", original_raw_image)
                 cv2.imwrite(f"figs/well_{iy}_{ix}.1.binary.png", binary_image)
-                self.find_and_save_contours_and_check_if_we_have_a_good_choice(binary_image,
-                                                                               rect_without_circles,
+                self.find_contours_and_return_appropriate_hull(binary_image,
+                                                               rect_without_circles,
                                                                                f"figs/well_{iy}_{ix}")
 
 
@@ -612,7 +668,7 @@ class PlateMeasurement(Treant):
 
                     cv2.imwrite(f"figs/well_{iy}_{ix}_cropped.0.png", cropped_image)
                     cv2.imwrite(f"figs/well_{iy}_{ix}_cropped.binary.png", cropped_binary_image)
-                    good_choice = self.find_and_save_contours_and_check_if_we_have_a_good_choice(cropped_binary_image, rect_without_circles, f"figs/well_{iy}_{ix}_croped")
+                    good_choice, appropriate_hull = self.find_contours_and_return_appropriate_hull(cropped_binary_image, rect_without_circles, f"figs/well_{iy}_{ix}_cropped", output_plot=True)
 
                     if good_choice:
                         break
@@ -621,9 +677,6 @@ class PlateMeasurement(Treant):
 
                 binary_image_pixels = binary_image.flatten()
 
-                if self.pixel_intensities:
-                    for j in binary_image_pixels:
-                        self.well_pixel_intensities[iy,ix].append(j)
 
 
                 self.well_growth[iy,ix] = numpy.sum([binary_image_pixels == 0],dtype=numpy.float64)/(len(binary_image_pixels))*100
