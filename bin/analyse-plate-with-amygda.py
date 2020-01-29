@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-import amygda
+from amygda.core import PlateMeasurement
 import argparse, numpy
 from scipy import stats
 
@@ -30,7 +30,7 @@ else:
 assert options.plate_design in ['UKMYC5','UKMYC6','GPALL1F','CHNMCMM2'], "this plate design is not recognised"
 
 # create a new measurement
-plate=amygda.PlateMeasurement(image_path,categories={'ImageFileName':image_name},configuration_path="config/",pixel_intensities=False,plate_design=options.plate_design)
+plate=PlateMeasurement(image_path,categories={'ImageFileName':image_name},configuration_path="config/",pixel_intensities=False,plate_design=options.plate_design)
 
 # create the path for the output images
 plate_stem=plate.abspath+plate.image_name
