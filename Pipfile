@@ -10,6 +10,7 @@ numpy = "*"
 scipy = "*"
 opencv-python = "*"
 matplotlib = "*"
+datreant = "*"
 
 [requires]
 python_version = "3.7"
