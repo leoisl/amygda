@@ -11,6 +11,7 @@ scipy = "*"
 opencv-python = "*"
 matplotlib = "*"
 datreant = "*"
+yattag = "*"
 
 [requires]
 python_version = "3.7"
