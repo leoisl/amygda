@@ -536,7 +536,19 @@ class PlateMeasurement(Treant):
 
         self.draw_contours(background_image, [[appropriate_hull]], f"{filename}.chosen_hull.png")
         self.crop_based_on_hull(image, background_image, f"{filename}.chosen_hull.cropped.png", appropriate_hull)
-        appropriate_hull_image = self.crop_based_on_hull_to_get_growth(image, image, f"{filename}.chosen_hull.binary.png", appropriate_hull)
+
+
+        # now that we have the good hull, there is no noise of shadow or well border. The darker colours are either growth or condensation
+        # binarise with a fixed threshold
+        chosen_hull_cropped_raw_image = cv2.imread(f'{filename}.chosen_hull.cropped.png')
+        chosen_hull_cropped_raw_image = cv2.cvtColor(chosen_hull_cropped_raw_image,
+                                                     cv2.COLOR_BGR2GRAY)
+
+        theshold, chosen_hull_cropped_raw_image_binary_fixed = cv2.threshold(chosen_hull_cropped_raw_image, 120, 255,
+                                                                             cv2.THRESH_BINARY)
+        cv2.imwrite(f'{filename}.chosen_hull.cropped.binary_fixed.png', chosen_hull_cropped_raw_image_binary_fixed)
+
+        appropriate_hull_image = chosen_hull_cropped_raw_image_binary_fixed
 
         x_center_of_appropriate_hull, y_center_of_appropriate_hull = self.get_center_of_contour(appropriate_hull)
 
@@ -551,6 +563,8 @@ class PlateMeasurement(Treant):
 
         good_choice = not big_difference_in_area
 
+
+
         if good_choice and output_plot or force_output_plot:
             fig, ax1 = plt.subplots()
 
@@ -559,10 +573,16 @@ class PlateMeasurement(Treant):
 
             chosen_hull_img = plt.imread(f'{filename}.chosen_hull.png')
 
-            chosen_hull_binary_img = plt.imread(f'{filename}.chosen_hull.binary.png')
-            chosen_hull_binary_img = cv2.cvtColor(chosen_hull_binary_img, cv2.COLOR_GRAY2BGR)
+            chosen_hull_binary_img = cv2.cvtColor(chosen_hull_cropped_raw_image_binary_fixed, cv2.COLOR_GRAY2BGR)
 
-            ax1.hist(distances, bins=range(0, int(max(distances))+1))
+            if len(distances) == 0:
+                max_bin = 30
+            else:
+                max_bin = max(30, max(distances))
+            ax1.hist(distances, bins=range(0, int(max_bin)))
+            bottom, top = ax1.get_ylim()  # return the current ylim
+            top = max(top, 30)
+            ax1.set_ylim(0, top)
 
             ax2 = fig.add_axes([0.10, 0.8, 0.2, 0.2])
             ax2.imshow(raw_image)
@@ -581,33 +601,28 @@ class PlateMeasurement(Treant):
 
             self.histogram_files.append(f'{filename}.histogram.png')
 
-
-
-            chosen_hull_cropped_raw_image = cv2.imread(f'{filename}.chosen_hull.cropped.png')
-            chosen_hull_cropped_raw_image = cv2.cvtColor(chosen_hull_cropped_raw_image,
-                                                                cv2.COLOR_BGR2GRAY)
-            fig, ax1 = plt.subplots()
-            chosen_hull_cropped_raw_image = numpy.where(chosen_hull_cropped_raw_image == 255, 0,
-                                                               chosen_hull_cropped_raw_image)
-            cv2.imwrite(f'{filename}.chosen_hull.total_white_to_black.png', chosen_hull_cropped_raw_image)
-            threshold, chosen_hull_cropped_whiteish_pixels_highlighted = cv2.threshold(chosen_hull_cropped_raw_image, 200, 255, cv2.THRESH_BINARY_INV)
-            # cv2.imwrite(f'{filename}.chosen_hull.whiteish_pixels_highlighted.png', chosen_hull_cropped_whiteish_pixels_highlighted)
-
-            contours, inner_contours, outer_contours = self.get_countours(chosen_hull_cropped_whiteish_pixels_highlighted)
-            hulls = [
-                [hull] for hull,_ in
-                    [self.get_hull_and_area_from_contour(contour) for contour in contours]
-            ]
-
-
-            self.draw_contours(chosen_hull_cropped_whiteish_pixels_highlighted, hulls, f"{filename}.chosen_hull.whiteish_pixels_highlighted.png")
-
-            raw_pixels = chosen_hull_cropped_raw_image.flatten()
-            raw_pixels = raw_pixels[raw_pixels > 0]
-            ax1.hist(raw_pixels, bins=range(0, 261, 10))
-            plt.savefig(f'{filename}.chosen_hull_cropped.histogram.png')
-            plt.close()
-            self.color_histograms.append(f'{filename}.chosen_hull_cropped.histogram.png')
+            # fig, ax1 = plt.subplots()
+            # chosen_hull_cropped_raw_image = numpy.where(chosen_hull_cropped_raw_image == 255, 0,
+            #                                                    chosen_hull_cropped_raw_image)
+            # cv2.imwrite(f'{filename}.chosen_hull.total_white_to_black.png', chosen_hull_cropped_raw_image)
+            # threshold, chosen_hull_cropped_whiteish_pixels_highlighted = cv2.threshold(chosen_hull_cropped_raw_image, 200, 255, cv2.THRESH_BINARY_INV)
+            # # cv2.imwrite(f'{filename}.chosen_hull.whiteish_pixels_highlighted.png', chosen_hull_cropped_whiteish_pixels_highlighted)
+            #
+            # contours, inner_contours, outer_contours = self.get_countours(chosen_hull_cropped_whiteish_pixels_highlighted)
+            # hulls = [
+            #     [hull] for hull,_ in
+            #         [self.get_hull_and_area_from_contour(contour) for contour in contours]
+            # ]
+            #
+            #
+            # self.draw_contours(chosen_hull_cropped_whiteish_pixels_highlighted, hulls, f"{filename}.chosen_hull.whiteish_pixels_highlighted.png")
+            #
+            # raw_pixels = chosen_hull_cropped_raw_image.flatten()
+            # raw_pixels = raw_pixels[raw_pixels > 0]
+            # ax1.hist(raw_pixels, bins=range(0, 261, 10))
+            # plt.savefig(f'{filename}.chosen_hull_cropped.histogram.png')
+            # plt.close()
+            # self.color_histograms.append(f'{filename}.chosen_hull_cropped.histogram.png')
 
 
         return good_choice, appropriate_hull
@@ -681,10 +696,6 @@ class PlateMeasurement(Treant):
                     doc.stag("br")
                     doc.stag('img', src=f"images/{os.path.basename(histogram_file)}")
                     shutil.copy(histogram_file, images_path)
-                    color_histogram = self.color_histograms[index]
-                    doc.stag("br")
-                    doc.stag('img', src=f"images/{os.path.basename(color_histogram)}")
-                    shutil.copy(color_histogram, images_path)
 
         result = doc.getvalue()
         with open(report_path+"report.html", "w") as fout:

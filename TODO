@@ -1,36 +1,15 @@
-- Algorithm (to discuss together):
-    - Multi-stage because it is too complex to infer everything in few steps
-
-    1. Infer if there is growth
-        - cut "very distant" points (threshold on x in the plot)
-        - apply a lower threshold on y (noise reduction)
-            -this also should take care of sedimentation
-        - infer if there is growth
-            - How?
-
-    2. There is no growth:
-        - label as no growth and quit (we dont care if it has bubbles, condensation, etc - no growth is no growth)
-
-    3. There is growth. Infer if it is true growth
-
-    4. Check if there are bubbles:
-        - invert binarisation on white-ish pixels
-        - if there are a lot of small blobs, then there are bubbles
-            - label as bubbles and quit
-
+- BUBBLES ARE NOT AN ISSUE WITH ABSOLUTE THRESHOLD ANYMORE!
+- Condensation still an issue
     4. Check if there is condensation:
         - invert binarisation on white-ish pixels
         - if there is only one large (but <50% of the area) circular-ish (blob detection https://www.learnopencv.com/blob-detection-using-opencv-python-c/ , see circularity)
             - label as condensation and quit
 
-    5. Here, there is growth, no shadows, no sediment, no bubbles and no condensation hopefully.
-        - For now we ignore contamination and plate failure and whatever other issue that might happen
+- Calculate growth
+    - count the nb of black pixels / (region area)
+        - This will include the noise in the border (should we care for now)?
 
-    6. Calculate growth
-        - count the nb of black pixels / (region area)
-            - This will include the noise in the border (should we care for now)?
-
-    7. Label as growth and output percentage
+- Label as growth and output percentage
 
 
 
