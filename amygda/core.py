@@ -12,6 +12,7 @@ import math
 import os
 from yattag import Doc
 import shutil
+from skimage.morphology import closing
 
 class PlateMeasurement(Treant):
 
@@ -55,7 +56,8 @@ class PlateMeasurement(Treant):
         os.makedirs(self.debug_images, exist_ok=True)
 
         self.histogram_files = []
-        self.color_histograms = []
+        self.status = []
+        self.has_bubbles = []
 
     def load_image(self,file_ending):
         """ Load and store the image and its dimensions, then initialise a series of arrays to record the results
@@ -496,7 +498,76 @@ class PlateMeasurement(Treant):
         cy = int(M['m01'] / M['m00'])
         return cx, cy
 
-    def find_contours_and_return_appropriate_hull(self, image, background_image, filename, output_plot=False, force_output_plot=False):
+    def get_number_and_proportion_of_small_blobs(self, filename, raw_image, color):
+        assert color in ["white", "black"]
+
+        if color == "white":
+            raw_image = numpy.where(raw_image == 255, 0, raw_image)
+            _, thresholded_image = cv2.threshold(raw_image, 190, 255, cv2.THRESH_BINARY_INV)
+            filename = f"{filename}.whiteish_pixels_highlighted.png"
+        else:
+            _, thresholded_image = cv2.threshold(raw_image, 120, 255, cv2.THRESH_BINARY)
+            filename = f"{filename}.blackish_pixels_highlighted.png"
+
+            for threshold in range(0, 120, 10):
+                _, thresholded_image = cv2.threshold(raw_image, threshold, 255, cv2.THRESH_BINARY)
+                cv2.imwrite(f"{filename}.blackish_pixels_highlighted.threshold_{threshold}.png", thresholded_image)
+
+        contours, _, _ = self.get_countours(thresholded_image)
+        small_contours = [contour for contour in contours if cv2.contourArea(contour) < 20]
+        thresholded_image = cv2.cvtColor(thresholded_image, cv2.COLOR_GRAY2BGR)
+        self.draw_contours(thresholded_image, small_contours, filename)
+
+        if len(contours) == 0:
+            return 0, 0
+        proportion_of_small_blobs = len(small_contours) / len(contours)
+        return len(small_contours), proportion_of_small_blobs
+
+    def find_bubbles(self, raw_image, filename):
+        image_with_circles = raw_image.copy()
+        image_with_circles = cv2.cvtColor(image_with_circles, cv2.COLOR_GRAY2BGR)
+
+        binarised_image = cv2.adaptiveThreshold(raw_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                                     cv2.THRESH_BINARY,
+                                                     25,
+                                                     10)
+        contours, hierarchy = cv2.findContours(binarised_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        # contours, hierarchy = cv2.findContours(raw_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+
+        self.draw_contours(raw_image, [contours], f"{filename}.wtf.contours.png")
+
+
+        colours = []
+        for contour in contours:
+            perimeter = cv2.arcLength(contour, True)
+            area = abs(cv2.contourArea(contour))
+            approx = cv2.approxPolyDP(contour, 0.02 * perimeter, True)
+            if len(approx) > 5:
+                (x,y), radius = cv2.minEnclosingCircle(approx)
+                center = (int(x), int(y))
+                radius = int(math.sqrt(area/math.pi))
+
+                if radius < 5:
+                    cv2.circle(image_with_circles, center, radius, (0, 255, 0), 2)
+                    for y_in_raw_image in range(raw_image.shape[0]):
+                        for x_in_raw_image in range(raw_image.shape[1]):
+                            if (x_in_raw_image - x)**2 + (y_in_raw_image - y)**2 < radius**2:
+                                colours.append(raw_image[y_in_raw_image][x_in_raw_image])
+                    # if len(colours)>0:
+                    #     print(colours)
+
+
+        fig, ax1 = plt.subplots()
+        ax1.hist(colours, bins=range(0, 255))
+        plt.savefig(f'{filename}.bubble_colours_histogram.png')
+        plt.close()
+
+
+        cv2.imwrite(f"{filename}.wtf.png", image_with_circles)
+
+    def find_contours_and_return_appropriate_hull(self, image, background_image, block_size, filename, output_plot=False, force_output_plot=False):
         # transform bg image to BGR to draw with colours
         background_image = cv2.cvtColor(background_image, cv2.COLOR_GRAY2BGR)
 
@@ -538,17 +609,39 @@ class PlateMeasurement(Treant):
         self.crop_based_on_hull(image, background_image, f"{filename}.chosen_hull.cropped.png", appropriate_hull)
 
 
-        # now that we have the good hull, there is no noise of shadow or well border. The darker colours are either growth or condensation
+        # now that we have the good hull, there is no noise of shadow or well border. The darker colours are either growth or bubbles or condensation
         # binarise with a fixed threshold
         chosen_hull_cropped_raw_image = cv2.imread(f'{filename}.chosen_hull.cropped.png')
         chosen_hull_cropped_raw_image = cv2.cvtColor(chosen_hull_cropped_raw_image,
                                                      cv2.COLOR_BGR2GRAY)
+        chosen_hull_cropped_raw_image = closing(chosen_hull_cropped_raw_image)
+        cv2.imwrite(f'{filename}.chosen_hull.cropped.closed.png', chosen_hull_cropped_raw_image)
 
-        theshold, chosen_hull_cropped_raw_image_binary_fixed = cv2.threshold(chosen_hull_cropped_raw_image, 120, 255,
+        # self.find_bubbles(chosen_hull_cropped_raw_image, f'{filename}.chosen_hull.cropped.png')
+
+
+        _, chosen_hull_cropped_raw_image_binary_fixed = cv2.threshold(chosen_hull_cropped_raw_image, 150, 255,
                                                                              cv2.THRESH_BINARY)
-        cv2.imwrite(f'{filename}.chosen_hull.cropped.binary_fixed.png', chosen_hull_cropped_raw_image_binary_fixed)
 
+        chosen_hull_cropped_raw_image_binary = cv2.adaptiveThreshold(
+            chosen_hull_cropped_raw_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                              cv2.THRESH_BINARY,
+                              block_size,
+                              10)
+        cv2.imwrite(f'{filename}.chosen_hull.cropped.binary_fixed.png', chosen_hull_cropped_raw_image_binary_fixed)
         appropriate_hull_image = chosen_hull_cropped_raw_image_binary_fixed
+        cv2.imwrite(f'{filename}.chosen_hull.cropped.binary.png', chosen_hull_cropped_raw_image_binary)
+        # appropriate_hull_image = chosen_hull_cropped_raw_image_binary
+
+
+        # identify small black and white blobs
+        number_of_small_black_blobs, proportion_of_small_black_blobs = self.get_number_and_proportion_of_small_blobs(filename, chosen_hull_cropped_raw_image, "black")
+        number_of_small_white_blobs, proportion_of_small_white_blobs = self.get_number_and_proportion_of_small_blobs(filename, chosen_hull_cropped_raw_image, "white")
+
+
+        has_bubbles = number_of_small_black_blobs*0.5 <= number_of_small_white_blobs <= number_of_small_black_blobs*1.5 and \
+                      proportion_of_small_black_blobs > 0.8 and \
+                      proportion_of_small_white_blobs > 0.8
 
         x_center_of_appropriate_hull, y_center_of_appropriate_hull = self.get_center_of_contour(appropriate_hull)
 
@@ -601,29 +694,8 @@ class PlateMeasurement(Treant):
 
             self.histogram_files.append(f'{filename}.histogram.png')
 
-            # fig, ax1 = plt.subplots()
-            # chosen_hull_cropped_raw_image = numpy.where(chosen_hull_cropped_raw_image == 255, 0,
-            #                                                    chosen_hull_cropped_raw_image)
-            # cv2.imwrite(f'{filename}.chosen_hull.total_white_to_black.png', chosen_hull_cropped_raw_image)
-            # threshold, chosen_hull_cropped_whiteish_pixels_highlighted = cv2.threshold(chosen_hull_cropped_raw_image, 200, 255, cv2.THRESH_BINARY_INV)
-            # # cv2.imwrite(f'{filename}.chosen_hull.whiteish_pixels_highlighted.png', chosen_hull_cropped_whiteish_pixels_highlighted)
-            #
-            # contours, inner_contours, outer_contours = self.get_countours(chosen_hull_cropped_whiteish_pixels_highlighted)
-            # hulls = [
-            #     [hull] for hull,_ in
-            #         [self.get_hull_and_area_from_contour(contour) for contour in contours]
-            # ]
-            #
-            #
-            # self.draw_contours(chosen_hull_cropped_whiteish_pixels_highlighted, hulls, f"{filename}.chosen_hull.whiteish_pixels_highlighted.png")
-            #
-            # raw_pixels = chosen_hull_cropped_raw_image.flatten()
-            # raw_pixels = raw_pixels[raw_pixels > 0]
-            # ax1.hist(raw_pixels, bins=range(0, 261, 10))
-            # plt.savefig(f'{filename}.chosen_hull_cropped.histogram.png')
-            # plt.close()
-            # self.color_histograms.append(f'{filename}.chosen_hull_cropped.histogram.png')
-
+        if good_choice:
+            self.has_bubbles.append(has_bubbles)
 
         return good_choice, appropriate_hull
 
@@ -693,6 +765,8 @@ class PlateMeasurement(Treant):
                     column = index % self.well_dimensions[1]
                     with tag('h1'):
                         text(f'Well {row} {column}:')
+                    with tag('p'):
+                        text(f'Has bubbles {self.has_bubbles[index]}:')
                     doc.stag("br")
                     doc.stag('img', src=f"images/{os.path.basename(histogram_file)}")
                     shutil.copy(histogram_file, images_path)
@@ -753,26 +827,33 @@ class PlateMeasurement(Treant):
 
                 x=self.well_centre[(iy,ix)][0]
                 y=self.well_centre[(iy,ix)][1]
-                r=self.well_radii[(iy,ix)]
+                r=self.well_radii[(iy,ix)] * 1.1
 
                 max_y = self.image.shape[0]
                 max_x = self.image.shape[1]
 
                 original_raw_image = self.image[max(0, int(y-r)):min(int(y+r), max_y),
                                   max(0, int(x-r)):min(int(x+r), max_x)]
-
+                cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}.raw.png", original_raw_image)
 
                 # pad the image
                 padded_raw_image = self.pad_image(original_raw_image)
+                cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}.raw.padded.png", padded_raw_image)
 
                 padded_raw_image_with_circles = padded_raw_image.copy()
 
                 # recalculate the circle
                 circles = cv2.HoughCircles(padded_raw_image_with_circles, cv2.HOUGH_GRADIENT, 1, 50, param1=20,
-                                           param2=25, minRadius=int(0.9*r), maxRadius=int(1.1*r))
-                assert len(circles)==1
+                                           param2=25, minRadius=int(0.6*r), maxRadius=int(1.1*r))
+                if circles is None: circles = []
+                if len(circles) != 1:
+                    print(f"{len(circles)} circles found for well {iy} {ix}, should be 1")
+                    assert False
+
                 circle_x, circle_y, circle_radius = circles[0][0]
                 cv2.circle(padded_raw_image_with_circles, (int(circle_x), int(circle_y)), int(circle_radius), 0, thickness=2)
+                cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}.raw.padded_with_circles.png", padded_raw_image_with_circles)
+
 
                 # apply adaptive threshold
                 block_size = int(r)
@@ -787,12 +868,9 @@ class PlateMeasurement(Treant):
 
 
                 # debug printing
-                cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}.raw.png", original_raw_image)
-                cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}.raw.padded.png", padded_raw_image)
-                cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}.raw.padded_with_circles.png", padded_raw_image_with_circles)
                 cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}.binary.png", binary_image)
                 self.find_contours_and_return_appropriate_hull(binary_image,
-                                                               padded_raw_image,
+                                                               padded_raw_image, block_size,
                                                                                f"{self.debug_images}well_{iy}_{ix}")
 
 
@@ -807,7 +885,8 @@ class PlateMeasurement(Treant):
 
                     cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.raw.png", cropped_image)
                     cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.binary.png", cropped_binary_image)
-                    good_choice, appropriate_hull = self.find_contours_and_return_appropriate_hull(cropped_binary_image, padded_raw_image, f"{self.debug_images}well_{iy}_{ix}_cropped", output_plot=True)
+                    good_choice, appropriate_hull = self.find_contours_and_return_appropriate_hull(cropped_binary_image, \
+                       padded_raw_image, block_size, f"{self.debug_images}well_{iy}_{ix}_cropped", output_plot=True)
 
                     if good_choice:
                         break
@@ -825,6 +904,7 @@ class PlateMeasurement(Treant):
                     cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.binary.png", cropped_binary_image)
                     good_choice, appropriate_hull = self.find_contours_and_return_appropriate_hull(cropped_binary_image,
                                                                                                    padded_raw_image,
+                                                                                                   block_size,
                                                                                                    f"{self.debug_images}well_{iy}_{ix}_cropped",
                                                                                                    force_output_plot=True)
 
