@@ -59,6 +59,9 @@ class PlateMeasurement(Treant):
 
         self.histogram_files = []
 
+        self.there_is_growth_dispersion_in_control_well = False
+        self.apply_bubble_filter = False
+
     def load_image(self,file_ending):
         """ Load and store the image and its dimensions, then initialise a series of arrays to record the results
         """
@@ -366,7 +369,7 @@ class PlateMeasurement(Treant):
         # convert the 1 channel image to 3 channel
         if not self.image_colour:
             self._convert_image_to_colour()
-            self.image_colour=True
+            self.image_colour = True
 
         for iy in range(0,self.well_dimensions[0]):
             for ix in range(0,self.well_dimensions[1]):
@@ -595,7 +598,8 @@ class PlateMeasurement(Treant):
 
         # there is no noise of shadow or well border
         # but there could still have bubbles, condensation and sediment
-        chosen_hull_cropped_raw_image = self.remove_bubbles(chosen_hull_cropped_raw_image)
+        if self.apply_bubble_filter:
+            chosen_hull_cropped_raw_image = self.remove_bubbles(chosen_hull_cropped_raw_image)
         cv2.imwrite(f'{filename}.chosen_hull.cropped.bubbles_removed.png', chosen_hull_cropped_raw_image)
         chosen_hull_cropped_raw_image = self.remove_condensation(chosen_hull_cropped_raw_image)
         chosen_hull_cropped_raw_image = self.remove_sediments(chosen_hull_cropped_raw_image)
@@ -696,6 +700,12 @@ class PlateMeasurement(Treant):
                         doc.stag("br")
                         text("TODO: scale/normalise growth in chosen area for well size;")
 
+                with tag('h1'):
+                    text("Observations: ")
+
+                with tag('h3'):
+                    text(f"{'THERE IS' if self.there_is_growth_dispersion_in_control_well else 'THERE IS NOT'} dispersed growth in control wells,"
+                         f"so we are {'ENABLING' if self.apply_bubble_filter else 'DISABLING'} the bubble filter.")
 
                 with tag('h1'):
                     text("Wells:")
@@ -713,7 +723,7 @@ class PlateMeasurement(Treant):
             fout.write(result)
 
 
-    def process_well(self, iy, ix, c_param):
+    def process_well(self, iy, ix, c_param, add_to_report=False):
         x = self.well_centre[(iy, ix)][0]
         y = self.well_centre[(iy, ix)][1]
         r = self.well_radii[(iy, ix)] * 1.1
@@ -769,7 +779,7 @@ class PlateMeasurement(Treant):
             good_choice, appropriate_hull = self.find_contours_and_return_appropriate_hull(cropped_binary_image,
                                                                                            padded_raw_image,
                                                                                            f"{self.debug_images}well_{iy}_{ix}_cropped",
-                                                                                           output_plot=True)
+                                                                                           output_plot=add_to_report)
 
             if good_choice:
                 break
@@ -788,9 +798,55 @@ class PlateMeasurement(Treant):
             good_choice, appropriate_hull = self.find_contours_and_return_appropriate_hull(cropped_binary_image,
                                                                                            padded_raw_image,
                                                                                            f"{self.debug_images}well_{iy}_{ix}_cropped",
-                                                                                           force_output_plot=True)
+                                                                                           force_output_plot=add_to_report)
 
         binary_image_pixels = binary_image.flatten()
+
+        self.well_growth[iy, ix] = numpy.sum([binary_image_pixels == 0], dtype=numpy.float64) / (
+            len(binary_image_pixels)) * 100
+
+    def get_nb_black_pixels_in_image(self, image):
+        return numpy.count_nonzero(image == 0)
+
+
+    def infer_if_there_is_growth_dispersion_in_control_well(self, y, x):
+        unfiltered_image = cv2.imread(f"{self.debug_images}well_{y}_{x}_cropped.chosen_hull.cropped.png")
+        unfiltered_image = cv2.cvtColor(unfiltered_image, cv2.COLOR_BGR2GRAY)
+        _, unfiltered_image_binary_fixed = cv2.threshold(unfiltered_image, 120, 255, cv2.THRESH_BINARY)
+
+        contours, _, _ = self.get_countours(unfiltered_image_binary_fixed)
+
+        contours_area = sorted([cv2.contourArea(contour) for contour in contours], reverse=True)
+        contours_area = contours_area[1:] # remove the outer contour area
+
+        # remove very small growth (noise)
+        contours_area = [contour_area for contour_area in contours_area if contour_area >= 10]
+
+        return len(contours_area) >= 5
+
+        # # compute index of dispersion (https://en.wikipedia.org/wiki/Index_of_dispersion)
+        # variance = numpy.var(contours_area)
+        # mean = numpy.mean(contours_area)
+        # index_of_dispersion = variance**2 / mean
+        # print(index_of_dispersion)
+        # return True
+
+        # there_is_a_big_contour = any([contour_area > 50 for contour_area in contours_area])
+        # number_of_small_contours = sum([contour_area < 50 for contour_area in contours_area])
+        # proportion_of_small_contours = number_of_small_contours / len(contours_area)
+        # return number_of_small_contours >= 5 and proportion_of_small_contours >= 0.8
+
+
+
+
+
+    def infer_if_we_have_growth_dispersion_in_control_wells(self):
+        there_is_growth_dispersion_in_control_well_1 = self.infer_if_there_is_growth_dispersion_in_control_well(7, 10)
+        there_is_growth_dispersion_in_control_well_2 = self.infer_if_there_is_growth_dispersion_in_control_well(
+            7, 11)
+
+        return there_is_growth_dispersion_in_control_well_1 or there_is_growth_dispersion_in_control_well_2
+
 
 
     def measure_growth(self,threshold_pixel=130,threshold_percentage=3,region=0.4,sensitivity=4.0, c_param = 10):
@@ -825,9 +881,15 @@ class PlateMeasurement(Treant):
         self.threshold_percentage=threshold_percentage
         self.sensitivity=sensitivity
 
+        self.process_well(7, 10, c_param)
+        self.process_well(7, 11, c_param)
+        self.there_is_growth_dispersion_in_control_well = self.infer_if_we_have_growth_dispersion_in_control_wells()
+        self.apply_bubble_filter = not self.there_is_growth_dispersion_in_control_well
+
+
         for iy in range(0,self.well_dimensions[0]):
             for ix in range(0,self.well_dimensions[1]):
-                self.process_well(iy, ix, c_param)
+                self.process_well(iy, ix, c_param, add_to_report=True)
 
 
         self.output_final_report()
