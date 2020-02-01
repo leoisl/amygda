@@ -14,6 +14,7 @@ from yattag import Doc
 import shutil
 
 from skimage.morphology import closing
+import matplotlib.ticker as plticker
 
 
 class PlateMeasurement(Treant):
@@ -479,7 +480,7 @@ class PlateMeasurement(Treant):
 
 
 
-    def draw_contours(self, background_image, contours, filename, colors=((0, 255, 0), (0, 0, 255), (255, 0, 0))):
+    def draw_contours(self, background_image, contours, filename, colors=((0, 0, 255), (0, 255, 0), (255, 0, 0))):
         vis = background_image.copy()
 
         if len(vis.shape) < 3:
@@ -512,17 +513,17 @@ class PlateMeasurement(Treant):
         return image
 
     def try_to_get_less_noisy_hull(self, second_largest_hull, area_of_the_second_largest_hull,
-            third_largest_hull, area_of_the_third_largest_hull):
+            third_largest_hull, area_of_the_third_largest_hull, background_image, filename):
         big_difference_in_area = area_of_the_third_largest_hull < 0.4 * area_of_the_second_largest_hull
 
         if big_difference_in_area:
             appropriate_hull = second_largest_hull
-            # self.draw_contours(background_image, [[second_largest_hull], [third_largest_hull]],
-            #                    f"{filename}.options_hulls.png")
+            self.draw_contours(background_image, [[third_largest_hull], [second_largest_hull]],
+                               f"{filename}.options_hulls.png")
         else:
             appropriate_hull = third_largest_hull
-            # self.draw_contours(background_image, [[third_largest_hull], [second_largest_hull]],
-            #                    f"{filename}.options_hulls.png")
+            self.draw_contours(background_image, [[second_largest_hull], [third_largest_hull]],
+                               f"{filename}.options_hulls.png")
 
         return big_difference_in_area, appropriate_hull
 
@@ -543,6 +544,8 @@ class PlateMeasurement(Treant):
         else:
             max_bin = max(30, max(distances))
         ax.hist(distances, bins=range(0, int(max_bin)))
+        loc = plticker.MultipleLocator(base=1.0)  # this locator puts ticks at regular intervals
+        ax.xaxis.set_major_locator(loc)
         bottom, top = ax.get_ylim()  # return the current ylim
         top = max(top, 30)
         ax.set_ylim(0, top)
@@ -550,7 +553,8 @@ class PlateMeasurement(Treant):
     def add_images_to_plot(self, fig, images_filenames):
         for index, image_filename in enumerate(images_filenames):
             image = cv2.imread(image_filename)
-            ax = fig.add_axes([0.10 + 0.15 * index, 0.8, 0.2, 0.2])
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            ax = fig.add_axes([0.05 + 0.05 * index, 0.8, 0.2, 0.2])
             ax.imshow(image)
             ax.axis("off")
 
@@ -577,7 +581,7 @@ class PlateMeasurement(Treant):
         self.draw_contours(background_image, [[second_largest_hull], [third_largest_hull]], f"{filename}.second_and_third_largest_hulls.png")
 
         # crop the background image based on the third_largest_hull
-        self.crop_based_on_hull(image, background_image, f"{filename}.third_largest_hull_cropped.png", third_largest_hull)
+        self.crop_based_on_hull(background_image, f"{filename}.third_largest_hull_cropped.png", third_largest_hull)
 
 
         # get the good hull (with less noise)
@@ -585,10 +589,12 @@ class PlateMeasurement(Treant):
             second_largest_hull,
             area_of_the_second_largest_hull,
             third_largest_hull,
-            area_of_the_third_largest_hull
+            area_of_the_third_largest_hull,
+            background_image,
+            filename
         )
         self.draw_contours(background_image, [[appropriate_hull]], f"{filename}.chosen_hull.png")
-        self.crop_based_on_hull(image, background_image, f"{filename}.chosen_hull.cropped.png", appropriate_hull)
+        self.crop_based_on_hull(background_image, f"{filename}.chosen_hull.cropped.png", appropriate_hull)
 
 
         # we have now the following good hull
@@ -623,13 +629,15 @@ class PlateMeasurement(Treant):
         good_choice = not big_difference_in_area
 
         if good_choice and output_plot or force_output_plot:
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=(20, 5))
 
             self.add_histogram_to_fig(ax, distances_of_black_pixels_to_center_of_hull)
             self.add_images_to_plot(fig,
                 [
                 f'{filename.replace("_cropped", ".raw.padded.png")}',
-                f'{filename}.chosen_hull.png',
+                f'{filename.replace("_cropped", ".second_and_third_largest_hulls.png")}',
+                f'{filename.replace("_cropped", ".third_largest_hull_cropped.png")}',
+                f'{filename}.options_hulls.png',
                 f'{filename}.chosen_hull.cropped.png',
                 f'{filename}.chosen_hull.cropped.bubbles_removed.png',
                 f'{filename}.chosen_hull.cropped.binary_fixed.png',
