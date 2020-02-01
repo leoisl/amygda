@@ -427,15 +427,19 @@ class PlateMeasurement(Treant):
             self.categories.remove("IM_"+drug.upper()+"MIC")
             self.categories.remove("IM_"+drug.upper()+"DILUTION")
 
-    def crop_based_on_hull(self, image, background_image, filename, hull):
-        mask = numpy.zeros(image.shape, dtype='uint8')
+    def crop_based_on_hull(self, background_image, filename, hull):
+        background_image_gray = cv2.cvtColor(background_image, cv2.COLOR_BGR2GRAY)
+        mask = numpy.zeros(background_image_gray.shape, dtype='uint8')
         mask = cv2.drawContours(mask, [hull], -1, (255, 255, 255), thickness=cv2.FILLED)
         cv2.imwrite(f"{filename}.mask.png", mask)
-        # img2gray = cv2.bitwise_not(mask)
-        # img2gray = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
-        ret, mask = cv2.threshold(mask, 10, 255, cv2.THRESH_BINARY)
-        result = cv2.bitwise_and(background_image, background_image, mask=mask)
-        result = numpy.where(result == 0, 255, result)
+        result = []
+        for background_image_pixel, mask_pixel in zip(background_image_gray.flatten(), mask.flatten()):
+            if mask_pixel:
+                result.append(background_image_pixel)
+            else:
+                result.append(255)
+        result = numpy.array(result, dtype="uint8")
+        result = result.reshape(background_image_gray.shape)
         cv2.imwrite(filename, result)
 
     def crop_based_on_hull_to_get_growth(self, image, background_image, filename, hull):
