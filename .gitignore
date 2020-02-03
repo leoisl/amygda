@@ -118,3 +118,6 @@ ENV/
 Pipfile\.lock
 
 examples/
+\.snakemake/
+
+examples_backup/
