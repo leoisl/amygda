@@ -516,8 +516,8 @@ class PlateMeasurement(Treant):
         # TODO
         return image
 
-    def try_to_get_less_noisy_hull(self, second_largest_hull, area_of_the_second_largest_hull,
-            third_largest_hull, area_of_the_third_largest_hull, background_image, filename):
+    def try_to_get_hull_with_no_shadows_and_outer_noise(self, second_largest_hull, area_of_the_second_largest_hull,
+                                                        third_largest_hull, area_of_the_third_largest_hull, background_image, filename):
         big_difference_in_area = area_of_the_third_largest_hull < 0.4 * area_of_the_second_largest_hull
 
         if big_difference_in_area:
@@ -589,7 +589,7 @@ class PlateMeasurement(Treant):
 
 
         # get the good hull (with less noise)
-        big_difference_in_area, appropriate_hull = self.try_to_get_less_noisy_hull(
+        big_difference_in_area, appropriate_hull = self.try_to_get_hull_with_no_shadows_and_outer_noise(
             second_largest_hull,
             area_of_the_second_largest_hull,
             third_largest_hull,
@@ -735,10 +735,10 @@ class PlateMeasurement(Treant):
             fout.write(result)
 
 
-    def process_well(self, iy, ix, c_param, add_to_report=False):
+    def process_well(self, iy, ix, c_param, zoom_out_factor=0.1, add_to_report=False):
         x = self.well_centre[(iy, ix)][0]
         y = self.well_centre[(iy, ix)][1]
-        r = self.well_radii[(iy, ix)] * 1.1
+        r = self.well_radii[(iy, ix)] * (1.0 + zoom_out_factor)
         max_y = self.image.shape[0]
         max_x = self.image.shape[1]
 
@@ -753,8 +753,9 @@ class PlateMeasurement(Treant):
 
         # recalculate and draw the circle in the image
         padded_raw_image_with_circles = padded_raw_image.copy()
+        # TODO: take a look at these cv2.HoughCircles() params
         circles = cv2.HoughCircles(padded_raw_image_with_circles, cv2.HOUGH_GRADIENT, 1, 50, param1=20,
-                                   param2=25, minRadius=int(0.6 * r), maxRadius=int(1.1 * r))
+                                   param2=25, minRadius=int(0.6 * r), maxRadius=int(1.2 * r))
         if circles is None: circles = []
         if len(circles) != 1:
             print(f"{len(circles)} circles found for well {iy} {ix}, should be 1")
@@ -764,6 +765,9 @@ class PlateMeasurement(Treant):
         cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}.raw.padded_with_circles.png", padded_raw_image_with_circles)
 
         # apply adaptive threshold
+        # TODO: this block size is too large I think... it makes very thick contours
+        # TODO: if needed to close up some circles, we should be looking at https://scikit-image.org/docs/dev/api/skimage.morphology.html#skimage.morphology.erosion
+        # TODO: but this could enlarge growth as well
         block_size = int(r)
         if block_size % 2 == 0: block_size += 1
         binary_image = cv2.adaptiveThreshold(padded_raw_image_with_circles, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -779,22 +783,24 @@ class PlateMeasurement(Treant):
 
         # find a even less noisy hull inside the well
         for variable_c_param in range(c_param, 0, -1):
-            cropped_image = cv2.imread(f"{self.debug_images}well_{iy}_{ix}.third_largest_hull_cropped.png")
-            cropped_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
-            cropped_binary_image = cv2.adaptiveThreshold(cropped_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                                         cv2.THRESH_BINARY,
-                                                         block_size,
-                                                         variable_c_param)
+            # TODO: I do think we should reduce the block size here
+            # for block_size in range(5, block_size+1, 4):
+                cropped_image = cv2.imread(f"{self.debug_images}well_{iy}_{ix}.third_largest_hull_cropped.png")
+                cropped_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
+                cropped_binary_image = cv2.adaptiveThreshold(cropped_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                                             cv2.THRESH_BINARY,
+                                                             block_size,
+                                                             variable_c_param)
 
-            cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.raw.png", cropped_image)
-            cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.binary.png", cropped_binary_image)
-            good_choice, appropriate_hull = self.find_contours_and_return_appropriate_hull(cropped_binary_image,
-                                                                                           padded_raw_image,
-                                                                                           f"{self.debug_images}well_{iy}_{ix}_cropped",
-                                                                                           output_plot=add_to_report)
+                cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.raw.png", cropped_image)
+                cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.binary.png", cropped_binary_image)
+                good_choice, appropriate_hull = self.find_contours_and_return_appropriate_hull(cropped_binary_image,
+                                                                                               padded_raw_image,
+                                                                                               f"{self.debug_images}well_{iy}_{ix}_cropped",
+                                                                                               output_plot=add_to_report)
 
-            if good_choice:
-                break
+                if good_choice:
+                    break
 
         if good_choice == False:
             # we never got a good choice, fallback to the first one
@@ -822,6 +828,7 @@ class PlateMeasurement(Treant):
 
 
     def infer_if_there_is_growth_dispersion_in_control_well(self, y, x):
+        # TODO: here we just infer if there are 5+ medium or large growth contours, this should be improved
         unfiltered_image = cv2.imread(f"{self.debug_images}well_{y}_{x}_cropped.chosen_hull.cropped.png")
         unfiltered_image = cv2.cvtColor(unfiltered_image, cv2.COLOR_BGR2GRAY)
         _, unfiltered_image_binary_fixed = cv2.threshold(unfiltered_image, 120, 255, cv2.THRESH_BINARY)
@@ -834,8 +841,11 @@ class PlateMeasurement(Treant):
         # remove very small growth (noise)
         contours_area = [contour_area for contour_area in contours_area if contour_area >= 10]
 
-        return len(contours_area) >= 5
+        there_are_five_or_more_non_small_growth = len(contours_area) >= 5
 
+        return there_are_five_or_more_non_small_growth
+
+        # Previous tries for dispersion detection:
         # # compute index of dispersion (https://en.wikipedia.org/wiki/Index_of_dispersion)
         # variance = numpy.var(contours_area)
         # mean = numpy.mean(contours_area)
@@ -852,8 +862,11 @@ class PlateMeasurement(Treant):
 
 
 
-    def infer_if_we_have_growth_dispersion_in_control_wells(self):
+    def infer_if_we_have_growth_dispersion_in_control_wells(self, c_param):
+        self.process_well(7, 10, c_param)
         there_is_growth_dispersion_in_control_well_1 = self.infer_if_there_is_growth_dispersion_in_control_well(7, 10)
+
+        self.process_well(7, 11, c_param)
         there_is_growth_dispersion_in_control_well_2 = self.infer_if_there_is_growth_dispersion_in_control_well(
             7, 11)
 
@@ -861,7 +874,7 @@ class PlateMeasurement(Treant):
 
 
 
-    def measure_growth(self,threshold_pixel=130,threshold_percentage=3,region=0.4,sensitivity=4.0, c_param = 10):
+    def measure_growth(self,threshold_pixel=120,threshold_percentage=3,region=0.4,sensitivity=4.0, c_param = 10):
         """ Analyse each of the wells and decide if there is bacterial growth.
 
         This is all based on the pixels found in a central square region.
@@ -893,9 +906,7 @@ class PlateMeasurement(Treant):
         self.threshold_percentage=threshold_percentage
         self.sensitivity=sensitivity
 
-        self.process_well(7, 10, c_param)
-        self.process_well(7, 11, c_param)
-        self.there_is_growth_dispersion_in_control_well = self.infer_if_we_have_growth_dispersion_in_control_wells()
+        self.there_is_growth_dispersion_in_control_well = self.infer_if_we_have_growth_dispersion_in_control_wells(c_param)
         self.apply_bubble_filter = not self.there_is_growth_dispersion_in_control_well
 
 
