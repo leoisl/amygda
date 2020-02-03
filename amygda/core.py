@@ -376,13 +376,13 @@ class PlateMeasurement(Treant):
             for ix in range(0,self.well_dimensions[1]):
 
                 # label = "%02d" % self.well_index[(iy,ix)]
-                label1 = "%s" % (self.well_drug_name[(iy,ix)])
-                label2 = "%s" % (self.well_drug_conc[(iy,ix)])
+                label1 = "%s-%s" % (self.well_drug_name[(iy,ix)], self.well_drug_conc[(iy,ix)])
+                label2 = "%s%%" % (int(self.well_growth[(iy,ix)]))
 
                 (a,b) = (int(self.well_centre[(iy,ix)][0]),int(self.well_centre[(iy,ix)][1]))
 
-                cv2.putText(self.image, label1, (a-round(15*self.scaling_factor),b-round(20*self.scaling_factor)), cv2.FONT_HERSHEY_SIMPLEX, self.scaling_factor*fontsize, color, fontemphasis)
-                cv2.putText(self.image, label2, (a-round(15*self.scaling_factor),b+round(30*self.scaling_factor)), cv2.FONT_HERSHEY_SIMPLEX, self.scaling_factor*fontsize, color, fontemphasis)
+                cv2.putText(self.image, label1, (int(a-self.well_radii[(iy,ix)]),b-round(20*self.scaling_factor)), cv2.FONT_HERSHEY_SIMPLEX, self.scaling_factor*fontsize, (255,0,0), fontemphasis)
+                cv2.putText(self.image, label2, (a-round(15*self.scaling_factor),b+round(30*self.scaling_factor)), cv2.FONT_HERSHEY_SIMPLEX, self.scaling_factor*fontsize, (0,0,255), fontemphasis)
 
     def annotate_well_analysed_region(self,growth_color=(0,0,0),region=0.4,thickness=1): #,threshold_percentage=3,sensitivity=0):
         """ Draw coloured squares on the wells with detected bacterial growth.
@@ -542,12 +542,15 @@ class PlateMeasurement(Treant):
                     distances_of_black_pixels_to_center_of_hull.append(distance)
         return distances_of_black_pixels_to_center_of_hull
 
-    def add_histogram_to_fig(self, ax, distances):
+    def get_bins_for_histogram(self, distances):
         if len(distances) == 0:
             max_bin = 30
         else:
             max_bin = max(30, max(distances))
-        ax.hist(distances, bins=range(0, int(max_bin)))
+        return range(0, int(max_bin))
+
+    def add_histogram_to_fig(self, ax, distances):
+        ax.hist(distances, bins=self.get_bins_for_histogram(distances))
         loc = plticker.MultipleLocator(base=1.0)  # this locator puts ticks at regular intervals
         ax.xaxis.set_major_locator(loc)
         bottom, top = ax.get_ylim()  # return the current ylim
@@ -562,7 +565,7 @@ class PlateMeasurement(Treant):
             ax.imshow(image)
             ax.axis("off")
 
-    def find_contours_and_return_appropriate_hull(self, image, background_image, filename, output_plot=False, force_output_plot=False):
+    def find_contours_and_return_appropriate_hull(self, image, background_image, filename):
         # transform bg image to BGR to draw with colours
         background_image = cv2.cvtColor(background_image, cv2.COLOR_GRAY2BGR)
 
@@ -623,37 +626,77 @@ class PlateMeasurement(Treant):
 
         appropriate_hull_image = chosen_hull_cropped_raw_image_binary_fixed
 
+        good_choice = not big_difference_in_area
 
+        return good_choice, appropriate_hull, appropriate_hull_image
+
+    def get_area_of_ring(self, r1, r2):
+        big_r = max(r1, r2)
+        small_r = min(r1, r2)
+        return (math.pi * (big_r**2)) - (math.pi * (small_r**2))
+
+    def get_growth(self, appropriate_hull, appropriate_hull_image, initial_ring_radius=5, min_proportion_of_growth_initial_radius=0.01,
+                   incremental_ring_radius=5, min_proportion_of_growth_incremental_radius=0.03):
+        # TODO: add max_difference_in_growth_between_rings=0.3?
         x_center_of_appropriate_hull, y_center_of_appropriate_hull = self.get_center_of_contour(appropriate_hull)
-
         distances_of_black_pixels_to_center_of_hull = self.get_distances_of_black_pixels_to_center_of_hull(
             appropriate_hull_image, x_center_of_appropriate_hull, y_center_of_appropriate_hull
         )
 
-        good_choice = not big_difference_in_area
+        if len(distances_of_black_pixels_to_center_of_hull)==0:
+            return 0.0
 
-        if good_choice and output_plot or force_output_plot:
-            fig, ax = plt.subplots(figsize=(20, 5))
+        max_distance = max(distances_of_black_pixels_to_center_of_hull)
+        rings_radius = [0] + list(range(initial_ring_radius, int(max_distance) + incremental_ring_radius, incremental_ring_radius))
+        histogram = numpy.histogram(distances_of_black_pixels_to_center_of_hull, rings_radius)
+        nb_black_pixels_in_each_bin = numpy.array(histogram[0])
+        rings_area =  numpy.array([ self.get_area_of_ring(small_ring, big_ring) for small_ring, big_ring in zip(rings_radius[:-1], rings_radius[1:])])
+        density_per_ring = nb_black_pixels_in_each_bin / rings_area
+        min_proportion_of_growth = [min_proportion_of_growth_initial_radius] + [min_proportion_of_growth_incremental_radius]*(len(density_per_ring)-1)
+        rings_indexes_with_too_low_growth = numpy.argwhere(density_per_ring < min_proportion_of_growth)
+        if len(rings_indexes_with_too_low_growth)==0:
+            ring_limit = len(nb_black_pixels_in_each_bin)
+        else:
+            ring_limit = rings_indexes_with_too_low_growth[0][0]
 
-            self.add_histogram_to_fig(ax, distances_of_black_pixels_to_center_of_hull)
-            self.add_images_to_plot(fig,
-                [
-                f'{filename.replace("_cropped", ".raw.padded.png")}',
-                f'{filename.replace("_cropped", ".second_and_third_largest_hulls.png")}',
-                f'{filename.replace("_cropped", ".third_largest_hull_cropped.png")}',
-                f'{filename}.options_hulls.png',
-                f'{filename}.chosen_hull.cropped.png',
-                f'{filename}.chosen_hull.cropped.bubbles_removed.png',
-                f'{filename}.chosen_hull.cropped.binary_fixed.png',
-                ])
+        nb_of_black_pixels_in_area_we_are_confident_it_is_growth = numpy.sum(nb_black_pixels_in_each_bin[:ring_limit])
+        area_of_appropriate_hull = cv2.contourArea(appropriate_hull)
+        growth = nb_of_black_pixels_in_area_we_are_confident_it_is_growth / area_of_appropriate_hull * 100
 
-            plt.savefig(f'{filename}.histogram.png')
-            plt.close()
+        print(f"histogram: {histogram}")
+        print(f"nb_black_pixels_in_each_bin: {nb_black_pixels_in_each_bin}")
+        print(f"density_per_ring: {density_per_ring}")
+        print(f"ring_limit: {ring_limit}")
+        print(f"nb_of_black_pixels_in_area_we_are_confident_it_is_growth: {nb_of_black_pixels_in_area_we_are_confident_it_is_growth}")
+        print(f"area_of_appropriate_hull: {area_of_appropriate_hull}")
+        print(f"growth: {growth}")
 
-            self.histogram_files.append(f'{filename}.histogram.png')
+        return growth
 
-        return good_choice, appropriate_hull
 
+    def plot(self, filename, appropriate_hull, appropriate_hull_image):
+        x_center_of_appropriate_hull, y_center_of_appropriate_hull = self.get_center_of_contour(appropriate_hull)
+        distances_of_black_pixels_to_center_of_hull = self.get_distances_of_black_pixels_to_center_of_hull(
+            appropriate_hull_image, x_center_of_appropriate_hull, y_center_of_appropriate_hull
+        )
+
+        fig, ax = plt.subplots(figsize=(20, 5))
+        self.add_histogram_to_fig(ax, distances_of_black_pixels_to_center_of_hull)
+        self.add_images_to_plot(fig,
+                                [
+                                    f'{filename.replace("_cropped", ".raw.padded.png")}',
+                                    f'{filename.replace("_cropped", ".second_and_third_largest_hulls.png")}',
+                                    f'{filename.replace("_cropped", ".third_largest_hull_cropped.png")}',
+                                    f'{filename}.options_hulls.png',
+                                    f'{filename}.chosen_hull.cropped.png',
+                                    f'{filename}.chosen_hull.cropped.bubbles_removed.png',
+                                    f'{filename}.chosen_hull.cropped.binary_fixed.png',
+                                ])
+
+        plt.savefig(f'{filename}.histogram.png')
+        plt.close()
+
+        self.histogram_files.append(f'{filename}.histogram.png')
 
     @staticmethod
     def pad_image(image):
@@ -794,10 +837,9 @@ class PlateMeasurement(Treant):
 
                 cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.raw.png", cropped_image)
                 cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.binary.png", cropped_binary_image)
-                good_choice, appropriate_hull = self.find_contours_and_return_appropriate_hull(cropped_binary_image,
+                good_choice, appropriate_hull, appropriate_hull_image = self.find_contours_and_return_appropriate_hull(cropped_binary_image,
                                                                                                padded_raw_image,
-                                                                                               f"{self.debug_images}well_{iy}_{ix}_cropped",
-                                                                                               output_plot=add_to_report)
+                                                                                               f"{self.debug_images}well_{iy}_{ix}_cropped")
 
                 if good_choice:
                     break
@@ -813,15 +855,14 @@ class PlateMeasurement(Treant):
 
             cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.raw.png", cropped_image)
             cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.binary.png", cropped_binary_image)
-            good_choice, appropriate_hull = self.find_contours_and_return_appropriate_hull(cropped_binary_image,
+            good_choice, appropriate_hull, appropriate_hull_image = self.find_contours_and_return_appropriate_hull(cropped_binary_image,
                                                                                            padded_raw_image,
-                                                                                           f"{self.debug_images}well_{iy}_{ix}_cropped",
-                                                                                           force_output_plot=add_to_report)
+                                                                                           f"{self.debug_images}well_{iy}_{ix}_cropped")
+        if add_to_report:
+            self.plot(f"{self.debug_images}well_{iy}_{ix}_cropped", appropriate_hull, appropriate_hull_image)
 
-        binary_image_pixels = binary_image.flatten()
-
-        self.well_growth[iy, ix] = numpy.sum([binary_image_pixels == 0], dtype=numpy.float64) / (
-            len(binary_image_pixels)) * 100
+        print(f"well {iy} {ix}")
+        self.well_growth[iy, ix] = self.get_growth(appropriate_hull, appropriate_hull_image)
 
     def get_nb_black_pixels_in_image(self, image):
         return numpy.count_nonzero(image == 0)
@@ -914,8 +955,8 @@ class PlateMeasurement(Treant):
             for ix in range(0,self.well_dimensions[1]):
                 self.process_well(iy, ix, c_param, add_to_report=True)
 
-
-        self.output_final_report()
+        # print(self.well_growth)
+        # self.output_final_report()
 
         counter=1
         positive_control_growth_total=0.0
