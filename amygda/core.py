@@ -779,90 +779,93 @@ class PlateMeasurement(Treant):
 
 
     def process_well(self, iy, ix, c_param, zoom_out_factor=0.1, add_to_report=False):
-        x = self.well_centre[(iy, ix)][0]
-        y = self.well_centre[(iy, ix)][1]
-        r = self.well_radii[(iy, ix)] * (1.0 + zoom_out_factor)
-        max_y = self.image.shape[0]
-        max_x = self.image.shape[1]
+        try:
+            x = self.well_centre[(iy, ix)][0]
+            y = self.well_centre[(iy, ix)][1]
+            r = self.well_radii[(iy, ix)] * (1.0 + zoom_out_factor)
+            max_y = self.image.shape[0]
+            max_x = self.image.shape[1]
 
-        # get the original raw image of the well only
-        original_raw_image = self.image[max(0, int(y - r)):min(int(y + r), max_y),
-                             max(0, int(x - r)):min(int(x + r), max_x)]
-        cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}.raw.png", original_raw_image)
+            # get the original raw image of the well only
+            original_raw_image = self.image[max(0, int(y - r)):min(int(y + r), max_y),
+                                 max(0, int(x - r)):min(int(x + r), max_x)]
+            cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}.raw.png", original_raw_image)
 
-        # pad the image
-        padded_raw_image = self.pad_image(original_raw_image)
-        cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}.raw.padded.png", padded_raw_image)
+            # pad the image
+            padded_raw_image = self.pad_image(original_raw_image)
+            cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}.raw.padded.png", padded_raw_image)
 
-        # recalculate and draw the circle in the image
-        padded_raw_image_with_circles = padded_raw_image.copy()
-        # TODO: take a look at these cv2.HoughCircles() params
-        circles = cv2.HoughCircles(padded_raw_image_with_circles, cv2.HOUGH_GRADIENT, 1, 50, param1=20,
-                                   param2=25, minRadius=int(0.6 * r), maxRadius=int(1.2 * r))
-        if circles is None: circles = []
-        if len(circles) != 1:
-            print(f"{len(circles)} circles found for well {iy} {ix}, should be 1")
-            assert False
-        circle_x, circle_y, circle_radius = circles[0][0]
-        cv2.circle(padded_raw_image_with_circles, (int(circle_x), int(circle_y)), int(circle_radius), 0, thickness=2)
-        cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}.raw.padded_with_circles.png", padded_raw_image_with_circles)
+            # recalculate and draw the circle in the image
+            padded_raw_image_with_circles = padded_raw_image.copy()
+            # TODO: take a look at these cv2.HoughCircles() params
+            circles = cv2.HoughCircles(padded_raw_image_with_circles, cv2.HOUGH_GRADIENT, 1, 50, param1=20,
+                                       param2=25, minRadius=int(0.6 * r), maxRadius=int(1.2 * r))
+            if circles is None: circles = []
+            if len(circles) != 1:
+                print(f"{len(circles)} circles found for well {iy} {ix}, should be 1")
+                assert False
+            circle_x, circle_y, circle_radius = circles[0][0]
+            cv2.circle(padded_raw_image_with_circles, (int(circle_x), int(circle_y)), int(circle_radius), 0, thickness=2)
+            cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}.raw.padded_with_circles.png", padded_raw_image_with_circles)
 
-        # apply adaptive threshold
-        # TODO: this block size is too large I think... it makes very thick contours
-        # TODO: if needed to close up some circles, we should be looking at https://scikit-image.org/docs/dev/api/skimage.morphology.html#skimage.morphology.erosion
-        # TODO: but this could enlarge growth as well
-        block_size = int(r)
-        if block_size % 2 == 0: block_size += 1
-        binary_image = cv2.adaptiveThreshold(padded_raw_image_with_circles, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                             cv2.THRESH_BINARY,
-                                             block_size,
-                                             c_param)
-        cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}.binary.png", binary_image)
+            # apply adaptive threshold
+            # TODO: this block size is too large I think... it makes very thick contours
+            # TODO: if needed to close up some circles, we should be looking at https://scikit-image.org/docs/dev/api/skimage.morphology.html#skimage.morphology.erosion
+            # TODO: but this could enlarge growth as well
+            block_size = int(r)
+            if block_size % 2 == 0: block_size += 1
+            binary_image = cv2.adaptiveThreshold(padded_raw_image_with_circles, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                                 cv2.THRESH_BINARY,
+                                                 block_size,
+                                                 c_param)
+            cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}.binary.png", binary_image)
 
-        # find the hull inside the well
-        self.find_contours_and_return_appropriate_hull(binary_image,
-                                                       padded_raw_image,
-                                                       f"{self.debug_images}well_{iy}_{ix}")
+            # find the hull inside the well
+            self.find_contours_and_return_appropriate_hull(binary_image,
+                                                           padded_raw_image,
+                                                           f"{self.debug_images}well_{iy}_{ix}")
 
-        # find a even less noisy hull inside the well
-        for variable_c_param in range(c_param, 0, -1):
-            # TODO: I do think we should reduce the block size here
-            # for block_size in range(5, block_size+1, 4):
+            # find a even less noisy hull inside the well
+            for variable_c_param in range(c_param, 0, -1):
+                # TODO: I do think we should reduce the block size here
+                # for block_size in range(5, block_size+1, 4):
+                    cropped_image = cv2.imread(f"{self.debug_images}well_{iy}_{ix}.third_largest_hull_cropped.png")
+                    cropped_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
+                    cropped_binary_image = cv2.adaptiveThreshold(cropped_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                                                 cv2.THRESH_BINARY,
+                                                                 block_size,
+                                                                 variable_c_param)
+
+                    cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.raw.png", cropped_image)
+                    cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.binary.png", cropped_binary_image)
+                    good_choice, appropriate_hull, appropriate_hull_image = self.find_contours_and_return_appropriate_hull(cropped_binary_image,
+                                                                                                   padded_raw_image,
+                                                                                                   f"{self.debug_images}well_{iy}_{ix}_cropped")
+
+                    if good_choice:
+                        break
+
+            if good_choice == False:
+                # we never got a good choice, fallback to the first one
                 cropped_image = cv2.imread(f"{self.debug_images}well_{iy}_{ix}.third_largest_hull_cropped.png")
                 cropped_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
                 cropped_binary_image = cv2.adaptiveThreshold(cropped_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                                              cv2.THRESH_BINARY,
                                                              block_size,
-                                                             variable_c_param)
+                                                             c_param)
 
                 cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.raw.png", cropped_image)
                 cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.binary.png", cropped_binary_image)
                 good_choice, appropriate_hull, appropriate_hull_image = self.find_contours_and_return_appropriate_hull(cropped_binary_image,
                                                                                                padded_raw_image,
                                                                                                f"{self.debug_images}well_{iy}_{ix}_cropped")
+            if add_to_report:
+                self.plot(f"{self.debug_images}well_{iy}_{ix}_cropped", appropriate_hull, appropriate_hull_image)
 
-                if good_choice:
-                    break
-
-        if good_choice == False:
-            # we never got a good choice, fallback to the first one
-            cropped_image = cv2.imread(f"{self.debug_images}well_{iy}_{ix}.third_largest_hull_cropped.png")
-            cropped_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2GRAY)
-            cropped_binary_image = cv2.adaptiveThreshold(cropped_image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                                         cv2.THRESH_BINARY,
-                                                         block_size,
-                                                         c_param)
-
-            cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.raw.png", cropped_image)
-            cv2.imwrite(f"{self.debug_images}well_{iy}_{ix}_cropped.binary.png", cropped_binary_image)
-            good_choice, appropriate_hull, appropriate_hull_image = self.find_contours_and_return_appropriate_hull(cropped_binary_image,
-                                                                                           padded_raw_image,
-                                                                                           f"{self.debug_images}well_{iy}_{ix}_cropped")
-        if add_to_report:
-            self.plot(f"{self.debug_images}well_{iy}_{ix}_cropped", appropriate_hull, appropriate_hull_image)
-
-        print(f"well {iy} {ix}")
-        self.well_growth[iy, ix] = self.get_growth(appropriate_hull, appropriate_hull_image)
+            print(f"well {iy} {ix}")
+            self.well_growth[iy, ix] = self.get_growth(appropriate_hull, appropriate_hull_image)
+        except: # TODO: get errors and process/fix them correctly
+            self.well_growth[iy, ix] = -1.0
 
     def get_nb_black_pixels_in_image(self, image):
         return numpy.count_nonzero(image == 0)
