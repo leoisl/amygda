@@ -52,6 +52,8 @@ Next version (prototype_v0.0.2):
     - To test:
         - dispersion can be measured as the ratio of the area of all growth contours (i.e. nb of black pixels) over the convex hulls of the growth contours;
             - Note that it is the convex hull over the contours, not the less noisy convex hull
-            - noise removal (i.e. remove very small contours) must be performed here
+            - noise removal must be performed here
+                - remove very small contours
+                - remove contours on the border that might be noise
             - reference? https://arxiv.org/abs/1605.05983
             - this gives a dispersion ration between 0 (very dispersed) and 1 (very concentrated) - it is a better model than what is written in main steps
