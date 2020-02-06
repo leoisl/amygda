@@ -1,4 +1,10 @@
+
+
+
 Next version (prototype_v0.0.2):
+    - Use texture with PCA to check if we can differentiate growth from other stuff
+        - see https://scikit-image.org/docs/dev/auto_examples/features_detection/plot_glcm.html
+
     - TLDR:
         - The main features of this version are:
             1) Correct growth miscalculation in control wells;
@@ -63,3 +69,6 @@ Next version (prototype_v0.0.2):
     - Get several features of a blob (i.e. HU moments and https://scikit-image.org/docs/dev/api/skimage.measure.html#skimage.measure.regionprops, shannon entropy, etc) and do PCA or sth else?
         -i.e. https://content.iospress.com/articles/bio-medical-materials-and-engineering/bme1426
         - https://www.sciencedirect.com/science/article/pii/S2590156720300013?via%3Dihub
+
+
+    - see https://www.thibault.biz/Doc/Publications/PosterWSCG2008_V4.pdf
