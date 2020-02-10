@@ -112,3 +112,12 @@ ENV/
 .mypy_cache/
 
 *~
+
+examples
+examples_backup
+.snakemake
+.idea
+.ipynb_checkpoints
+bin/well_dir/
+
+bin/translation\.csv
