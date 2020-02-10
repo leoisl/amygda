@@ -153,20 +153,32 @@ def split_plate_image_into_well_images_core(well_dir_for_this_plate, plate_image
         cv.imwrite(str(well_dir_for_this_plate / f"{well_label}.png"), segment)
 
 
+def remove_if_exists(dir_path):
+    if dir_path.exists():
+        dir_path.rmdir()
+
 def split_plate_image_into_well_images(plate_images, well_dir: Path, translation_csv: Path):
     dict_csv = {
         "original_plate_path_file": [],
         "anonymous_plate_path_dir_well_split": []
     }
 
-    for index_plate_image, plate_image_filename in enumerate(plate_images):
+    index_plate_image = 0
+    for plate_image_filename in plate_images:
         print(f"Processing {plate_image_filename}...")
-        split_plate_image_into_well_images_core(well_dir / f"{index_plate_image}", plate_image_filename, filter=False)
-        split_plate_image_into_well_images_core(well_dir / f"{index_plate_image}_filtered", plate_image_filename, filter=True)
+        try:
+            split_plate_image_into_well_images_core(well_dir / f"{index_plate_image}", plate_image_filename, filter=False)
+            split_plate_image_into_well_images_core(well_dir / f"{index_plate_image}_filtered", plate_image_filename, filter=True)
+            dict_csv["original_plate_path_file"].append(plate_image_filename.resolve())
+            well_dir_for_this_plate = well_dir / f"{index_plate_image}"
+            dict_csv["anonymous_plate_path_dir_well_split"].append(well_dir_for_this_plate.resolve())
+            index_plate_image += 1 # just increase index in case of success
+            print(f"OK {plate_image_filename}...")
+        except:
+            remove_if_exists(well_dir / f"{index_plate_image}")
+            remove_if_exists(well_dir / f"{index_plate_image}_filtered")
+            print(f"FAILED {plate_image_filename}, skipping...")
 
-        dict_csv["original_plate_path_file"].append(plate_image_filename.resolve())
-        well_dir_for_this_plate = well_dir / f"{index_plate_image}"
-        dict_csv["anonymous_plate_path_dir_well_split"].append(well_dir_for_this_plate.resolve())
 
 
     df = pd.DataFrame.from_dict(dict_csv)
