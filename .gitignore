@@ -113,11 +113,11 @@ ENV/
 
 *~
 
-\.idea/
+examples
+examples_backup
+.snakemake
+.idea
+.ipynb_checkpoints
+bin/well_dir/
 
-Pipfile\.lock
-
-examples/
-\.snakemake/
-
-examples_backup/
+bin/translation\.csv
