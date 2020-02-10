@@ -94,16 +94,6 @@ def segment_image(cs, img):
     return wells
 
 
-def get_args():
-    parser = argparse.ArgumentParser(description='Split plate images into well images.')
-    parser.add_argument('--plate_dir', type = str, help = 'Directory with the plate images', required=True)
-    parser.add_argument('--well_dir', type=str, help='Directory with the individual well images', required=True)
-    parser.add_argument('--translation_csv', type=str, help='Where to save the CSV with the translation of plate dir to well dir', required=True)
-    args = parser.parse_args()
-    return args
-
-
-
 # image filtering based on original amygda
 def stretch_histogram(image):
     mode=stats.mode(image,axis=None)[0]
@@ -140,7 +130,6 @@ def filter_image(plate_image):
 
 
 def split_plate_image_into_well_images_core(well_dir_for_this_plate, plate_image_filename, filter):
-    well_dir_for_this_plate.mkdir(parents=True)
     plate_image = cv.imread(str(plate_image_filename))
 
     circles = get_circles(plate_image)
@@ -157,44 +146,40 @@ def remove_if_exists(dir_path):
     if dir_path.exists():
         dir_path.rmdir()
 
-def split_plate_image_into_well_images(plate_images, well_dir: Path, translation_csv: Path):
+def split_plate_image_into_well_images(plate_image_filename, well_dir: Path, translation_csv: Path):
     dict_csv = {
         "original_plate_path_file": [],
         "anonymous_plate_path_dir_well_split": []
     }
 
-    index_plate_image = 0
-    for plate_image_filename in plate_images:
-        print(f"Processing {plate_image_filename}...")
-        try:
-            split_plate_image_into_well_images_core(well_dir / f"{index_plate_image}", plate_image_filename, filter=False)
-            split_plate_image_into_well_images_core(well_dir / f"{index_plate_image}_filtered", plate_image_filename, filter=True)
-            dict_csv["original_plate_path_file"].append(plate_image_filename.resolve())
-            well_dir_for_this_plate = well_dir / f"{index_plate_image}"
-            dict_csv["anonymous_plate_path_dir_well_split"].append(well_dir_for_this_plate.resolve())
-            index_plate_image += 1 # just increase index in case of success
-            print(f"OK {plate_image_filename}...")
-        except:
-            remove_if_exists(well_dir / f"{index_plate_image}")
-            remove_if_exists(well_dir / f"{index_plate_image}_filtered")
-            print(f"FAILED {plate_image_filename}, skipping...")
-
-
+    try:
+        well_dir_filtered = Path(str(well_dir) + "_filtered")
+        well_dir.mkdir(parents=True)
+        well_dir_filtered.mkdir(parents=True)
+        split_plate_image_into_well_images_core(well_dir, plate_image_filename, filter=False)
+        split_plate_image_into_well_images_core(well_dir_filtered, plate_image_filename, filter=True)
+        dict_csv["original_plate_path_file"].append(plate_image_filename.resolve())
+        dict_csv["anonymous_plate_path_dir_well_split"].append(well_dir.resolve())
+    except:
+        pass # even if it fails, we still want to say it is ok, as nothing will be written to the csv
 
     df = pd.DataFrame.from_dict(dict_csv)
     df.to_csv(translation_csv, index=False)
 
+def get_args():
+    parser = argparse.ArgumentParser(description='Split plate images into well images.')
+    parser.add_argument('--plate_image', type=str, help='Path to plate image', required=True)
+    parser.add_argument('--well_dir', type=str, help='Directory with the individual well images', required=True)
+    parser.add_argument('--translation_csv', type=str, help='Where to save the CSV with the translation of plate dir to well dir', required=True)
+    args = parser.parse_args()
+    return args
 
-def get_all_plate_images(plate_dir):
-    all_plate_images_as_str = glob.glob(f"{plate_dir}/**/*-raw.png", recursive=True)
-    return [Path(plate_image) for plate_image in all_plate_images_as_str]
+
 
 if __name__ == "__main__":
     args = get_args()
-    plate_images = get_all_plate_images(args.plate_dir)
+    plate_image_filename = Path(args.plate_image)
     well_dir = Path(args.well_dir)
     translation_csv = Path(args.translation_csv)
-    split_plate_image_into_well_images(plate_images, well_dir, translation_csv)
-
-
+    split_plate_image_into_well_images(plate_image_filename, well_dir, translation_csv)
 
