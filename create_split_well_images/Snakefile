@@ -43,7 +43,7 @@ rule split_well_images:
     threads: 1
     log: "logs/split_wells_image/{plate_name}.log"
     resources:
-        mem_mb = 500
+        mem_mb = 2000
     shell:
          "python create_split_wells_image.py --plate_image {input.raw_input} --well_dir {output.split_wells_dir} "
          "--translation_csv {output.translation_csv}"
