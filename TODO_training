@@ -2,3 +2,4 @@ Leandro:
     - Split the second half
     - Merge halves
     - 14-day only images ??
+    - Create the participants dataset on time (very slow cluster fs)
