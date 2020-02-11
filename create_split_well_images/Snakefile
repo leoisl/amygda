@@ -80,10 +80,11 @@ rule concatenate_well_images:
                 shutil.copytree(str(anonymous_plate_path_dir_well_split)+"_filtered",
                                 str(new_anonymous_plate_path_dir_well_split)+"_filtered")
 
-                dict_csv["original_plate_path_file"].append(original_plate_path_file)
-                dict_csv["anonymous_plate_path_dir_well_split"].append(new_anonymous_plate_path_dir_well_split)
+                dict_csv["original_plate_path_file"].append(str(original_plate_path_file))
+                dict_csv["anonymous_plate_path_dir_well_split"].append(str(new_anonymous_plate_path_dir_well_split))
 
                 index_anonymous_plate += 1
 
         df = pd.DataFrame.from_dict(dict_csv)
+        df["anonymous_plate_path_dir_well_split_filtered"] = df["anonymous_plate_path_dir_well_split"]+"_filtered"
         df.to_csv(output.translation_csv, index=False)
