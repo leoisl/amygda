@@ -43,7 +43,7 @@ rule split_well_images:
     threads: 1
     log: "logs/split_wells_image/{plate_name}.log"
     resources:
-        mem_mb = 4000
+        mem_mb = 500
     shell:
          "python create_split_wells_image.py --plate_image {input.raw_input} --well_dir {output.split_wells_dir} "
          "--translation_csv {output.translation_csv}"
@@ -59,7 +59,7 @@ rule concatenate_well_images:
     threads: 1
     log: "logs/concatenate_well_images.log"
     resources:
-        mem_mb = 4000
+        mem_mb = 8000
     run:
         split_wells_dir_path = Path(output.split_wells_dir)
         split_wells_dir_path.mkdir(parents=True, exist_ok=True)
