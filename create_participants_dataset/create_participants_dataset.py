@@ -10,23 +10,30 @@ predefined_names = "Einstein,Curie,Newton,Darwin,Hawking,Edison,Sanger,Sulston,K
 rows_to_consider = "ABGH"
 
 def get_total_number_of_wells(all_plates_translation_csv):
-    number_of_considered_well_per_plate = 4 * 12 # 4 because we are just looking at the first and last 2 rows
+    global rows_to_consider
+    number_of_considered_well_per_plate = len(rows_to_consider) * 12 # 4 because we are just looking at the first and last 2 rows
     total_number_of_wells = len(all_plates_translation_csv) * number_of_considered_well_per_plate
     return total_number_of_wells
 
 
-def get_all_control_wells(all_plates_translation_csv):
+def get_all_control_wells(all_plates_translation_csv, use_filtered_images):
+    column = "anonymous_plate_path_dir_well_split"
+    if use_filtered_images: column+="_filtered"
+
     all_control_wells = []
-    for well_split_dir in all_plates_translation_csv["anonymous_plate_path_dir_well_split"]:
+    for well_split_dir in all_plates_translation_csv[column]:
         all_control_wells.append(f"{well_split_dir}/H11.png")
         all_control_wells.append(f"{well_split_dir}/H12.png")
     return all_control_wells
 
 
-def get_all_non_control_wells(all_plates_translation_csv):
+def get_all_non_control_wells(all_plates_translation_csv, use_filtered_images):
     global rows_to_consider
+    column = "anonymous_plate_path_dir_well_split"
+    if use_filtered_images: column += "_filtered"
+
     all_non_control_wells = []
-    for well_split_dir in all_plates_translation_csv["anonymous_plate_path_dir_well_split"]:
+    for well_split_dir in all_plates_translation_csv[column]:
         for letter in rows_to_consider:
             for number in range(1, 13):
                 if (letter, number) != ("H", 11) and (letter, number) != ("H", 12):
@@ -138,7 +145,8 @@ def put_wells_in_dirs(wells, dir):
     wells_order = []
     random.shuffle(wells)
     for well in wells:
-        new_well_name = re.match(".*/(\d+/.*\.png)", well).group(1)
+        new_well_name = re.match(".*/(\d+(_filtered)?/.*\.png)", well).group(1)
+        print(new_well_name)
         new_well_name = new_well_name.replace("/", "_")
         new_well_path = dir/new_well_name
         shutil.copy(well, new_well_path)
@@ -173,7 +181,7 @@ def create_participants_dataset(all_plates_translation_csv_filepath, number_of_p
                                 nb_of_wells_per_part,
                                 percentage_of_images_from_control_wells,
                                 percentage_of_shared_control_well_between_participants,
-                                output_dir):
+                                output_dir, use_filtered_images):
     all_plates_translation_csv = pd.read_csv(all_plates_translation_csv_filepath)
     total_number_of_wells = get_total_number_of_wells(all_plates_translation_csv)
     max_number_of_wells_per_part = int(total_number_of_wells / number_of_participants)
@@ -190,8 +198,8 @@ def create_participants_dataset(all_plates_translation_csv_filepath, number_of_p
 
     number_of_shared_control_wells_per_part = int((percentage_of_shared_control_well_between_participants/100)*number_of_control_wells_per_part)
 
-    all_control_wells = get_all_control_wells(all_plates_translation_csv)
-    all_non_control_wells = get_all_non_control_wells(all_plates_translation_csv)
+    all_control_wells = get_all_control_wells(all_plates_translation_csv, use_filtered_images)
+    all_non_control_wells = get_all_non_control_wells(all_plates_translation_csv, use_filtered_images)
     try:
         participant_index_to_list_of_its_wells, participant_index_to_list_of_its_extra_control_wells =\
             make_participants_datasets(number_of_participants, number_of_control_wells_per_part,
@@ -217,6 +225,7 @@ def get_args():
     parser.add_argument('--share_control_well', type=float, help='Percentage of control wells between pair of participants',
                         required=True)
     parser.add_argument('--output_dir', type=str, help='Directory to output the participants dataset', required=True)
+    parser.add_argument('--filtered', action="store_true", help='Use the filtered images', default=False)
     args = parser.parse_args()
     return args
 
@@ -229,9 +238,10 @@ if __name__ == "__main__":
     percentage_of_shared_control_well_between_participants = args.share_control_well
     nb_of_wells_per_part = args.nb_of_wells_per_part
     output_dir = Path(args.output_dir)
+    use_filtered_images = args.filtered
     create_participants_dataset(all_plates_translation_csv_filepath, number_of_participants,
                                 nb_of_wells_per_part,
                                 percentage_of_images_from_control_wells,
                                 percentage_of_shared_control_well_between_participants,
-                                output_dir)
+                                output_dir, use_filtered_images)
 
