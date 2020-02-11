@@ -1,28 +1,9 @@
-import sys
 import random
-
 import os
-import glob
 import numpy as np
 import cv2 as cv
 import pandas as pd
 import argparse
-
-def order_points(pts):
-    r = np.zeros((4,2), dtype="float32")
-
-    s = pts.sum(axis=1)
-    r[0] = pts[np.argmin(s)]
-    r[2] = pts[np.argmax(s)]
-
-    d = np.diff(pts, axis=1)
-    r[1] = pts[np.argmin(d)]
-    r[3] = pts[np.argmax(d)]
-
-    return r
-
-def score(radii):
-    return np.var(radii)
 
 game_items = ['🧲', '🐚', '🦷', '🦴', '🗿', '🍍', '🥀']
 items = []
@@ -38,31 +19,6 @@ def status(calls):
     if random.randint(0,20) == 15:
         print(random.choice(["wow!!", "almost there!!!", "damn! you're good"]))
 
-def run(fp):
-    img = cv.imread(fp) 
-
-    b_r = 2
-    b_params = None
-    b_circs = []
-    for bs in range(3, 7, 2):
-        for m in range(5, 10, 5):
-            grey = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-            grey = cv.GaussianBlur(grey, (bs, bs), m)
-        
-            for p1 in range(59,70,2):
-                for p2 in range(10,25,1):
-                    circs = cv.HoughCircles(grey, cv.HOUGH_GRADIENT, 1, 79, param1=p1, param2=p2 , minRadius=38, maxRadius=43)
-
-                    if circs is not None: 
-                        if len(circs[0]) == 96:
-                            radii = np.array(list(map(lambda x: x[2], circs[0])))
-                            s = score(radii)
-                            if s < b_r:
-                                b_r = s
-                                b_params = (bs, m, p1, p2, np.average(radii))
-                                b_circs = circs[0]
-    
-    return b_circs
 
 def save_rows(calls, out_file):
     with open(out_file, 'w') as out_fd:
@@ -73,26 +29,6 @@ def save_rows(calls, out_file):
 
 def null_fn(x):
     pass
-
-def segment(cs, img):
-    b = 40
-    img = cv.copyMakeBorder(img, b, b, b, b, cv.BORDER_CONSTANT, 0)
-    wells = []
-
-    # wells are named in order: A1, A2, ..., B1, B2, ..., H12
-    names = [f"{row}{column}" for column in range(1,13) for row in "ABCDEFGH"]
-
-    # The set of circles needs to be sorted in the same order!
-    for name, c in zip(names, cs):
-        x, y, r = c
-        r = int(r)
-        x = int(x + b)
-        y = int(y + b)
-        well = img[y-r:y+r, x-r:x+r]
-        circle = np.zeros((r*2, r*2), np.uint8)
-        cv.circle(circle, (r, r), r-3, 255, thickness=-1)
-        wells.append((name, cv.bitwise_and(well, well, mask=circle)))
-    return wells
 
 
 def get_args():
