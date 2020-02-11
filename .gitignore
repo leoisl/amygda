@@ -127,3 +127,7 @@ create_split_well_images/split_well_images/
 create_participants_dataset/data/
 
 bin/data/
+
+create_participants_dataset/data_filtered/
+
+manual_annotator/data_filtered/
