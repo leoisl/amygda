@@ -121,3 +121,5 @@ examples_backup
 bin/well_dir/
 
 bin/translation\.csv
+
+create_split_well_images/split_well_images/
