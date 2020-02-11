@@ -123,3 +123,5 @@ bin/well_dir/
 bin/translation\.csv
 
 create_split_well_images/split_well_images/
+
+create_participants_dataset/data/
