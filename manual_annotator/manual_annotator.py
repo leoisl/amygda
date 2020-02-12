@@ -8,7 +8,7 @@ import argparse
 game_items = ['🧲', '🐚', '🦷', '🦴', '🗿', '🍍', '🥀']
 items = []
 hp = 0
-GAME_TITLE = 'Consumption Crush'
+GAME_TITLE = 'Bug Lasso'
 
 def status(calls):
     os.system('clear')
@@ -47,21 +47,24 @@ if __name__ == "__main__":
 
     cv.createTrackbar('p1', GAME_TITLE, 3, 20, null_fn)
     cv.createTrackbar('p2', GAME_TITLE, 3, 20, null_fn)
-    cv.createTrackbar('p3', GAME_TITLE, 0, 500, null_fn)
-    cv.createTrackbar('p4', GAME_TITLE, 10, 70, null_fn)
+    cv.createTrackbar('min growth', GAME_TITLE, 0, 500, null_fn)
+    cv.createTrackbar('well shadow', GAME_TITLE, 10, 70, null_fn)
+
+    # default positions
     cv.setTrackbarPos('p1', GAME_TITLE, 17)
     cv.setTrackbarPos('p2', GAME_TITLE, 6)
-    cv.setTrackbarPos('p3', GAME_TITLE, 28)
-    cv.setTrackbarPos('p4', GAME_TITLE, 14)
+    cv.setTrackbarPos('min growth', GAME_TITLE, 28)
+    cv.setTrackbarPos('well shadow', GAME_TITLE, 14)
    
     calls = ["filepath,p1,p2,area_threshold,growth,nb_of_contours,pass_or_fail"]
     well_no = 0
     while well_no < len(wells_paths):
         well_path = wells_paths[well_no]
         well = cv.imread(well_path)
+        flags = set([])
 
         while True:
-            p4 = cv.getTrackbarPos('p4', GAME_TITLE)
+            p4 = cv.getTrackbarPos('well shadow', GAME_TITLE)
             if p4 < 1:
                 p4=1
             b = 20
@@ -91,7 +94,7 @@ if __name__ == "__main__":
             if p1 < 3:
                 p1 = 3
             p2 = cv.getTrackbarPos('p2', GAME_TITLE)
-            area_thresh = cv.getTrackbarPos('p3', GAME_TITLE)
+            area_thresh = cv.getTrackbarPos('min growth', GAME_TITLE)
             blnk = cv.adaptiveThreshold(blnk, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, p1, p2)
             mask = np.zeros(well2.shape, np.uint8)
 
@@ -105,21 +108,39 @@ if __name__ == "__main__":
                     total_area += area
                     n_contours += 1
                    #break
+
+            font = cv.FONT_HERSHEY_SIMPLEX
+            img_blnk = cv.putText(img_blnk, str(total_area), (0, img_blnk.shape[1] - 5), font, 0.7, (0, 255, 0), 1)  # , cv.LINE_AA)
+            img_blnk = cv.putText(img_blnk, ','.join(flags), (0, 12), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
+
             cv.imshow(GAME_TITLE, img_blnk)
 
             key = cv.waitKey(1)
             if key == 27:
                 save_rows(calls)
                 exit()
+            elif key == ord('b'):
+                if 'BUBBLE' in flags:
+                    flags.remove('BUBBLE')
+                else:
+                    flags.add('BUBBLE')
+
+            elif key == ord('c'):
+                if 'COND' in flags:
+                    flags.remove('COND')
+                else:
+                    flags.add('COND')
             elif key == ord('n'):
-                call = f"{well_path},{p1},{p2},{area_thresh},{total_area},{n_contours},PASS"
+                flags = ':'.join(flags)
+                call = f"{well_path},{p1},{p2},{area_thresh},{total_area},{n_contours},PASS,{flags}"
                 calls.append(call)
                 well_no += 1
                 hp += 1
                 status(calls)
                 break
             elif key == ord('f'):
-                call = f"{well_path},{p1},{p2},{area_thresh},{total_area},{n_contours},FAIL"
+                flags = ':'.join(flags)
+                call = f"{well_path},{p1},{p2},{area_thresh},{total_area},{n_contours},FAIL,{flags}"
                 calls.append(call)
                 well_no += 1
                 hp += 1
