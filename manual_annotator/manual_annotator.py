@@ -43,7 +43,7 @@ if __name__ == "__main__":
     args = get_args()
     wells_paths = pd.read_csv(args.wells_csv)["wells"]
 
-    cv.namedWindow(GAME_TITLE)
+    cv.namedWindow(GAME_TITLE, cv.WINDOW_GUI_NORMAL)
 
     cv.createTrackbar('p1', GAME_TITLE, 3, 20, null_fn)
     cv.createTrackbar('p2', GAME_TITLE, 3, 20, null_fn)
@@ -130,6 +130,13 @@ if __name__ == "__main__":
                     flags.remove('COND')
                 else:
                     flags.add('COND')
+
+            elif key == ord('d'):
+                if 'DRY' in flags:
+                    flags.remove('DRY')
+                else:
+                    flags.add('DRY')
+
             elif key == ord('n'):
                 flags = ':'.join(flags)
                 call = f"{well_path},{p1},{p2},{area_thresh},{total_area},{n_contours},PASS,{flags}"
