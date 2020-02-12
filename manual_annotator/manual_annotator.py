@@ -160,7 +160,7 @@ if __name__ == "__main__":
             color_index = 0
             for cnt in contours[0]:
                 area = cv.contourArea(cnt)
-                contour_has_good_area = area > area_thresh and area < 500
+                contour_has_good_area = area > area_thresh and area < 2000
                 if contour_has_good_area:
                     # contour_avg_pixel_intensity = get_avg_pixel_intensity_for_contour(img_blnk_gray, cnt)
                     #
