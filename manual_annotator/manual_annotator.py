@@ -71,27 +71,27 @@ if __name__ == "__main__":
 
     cv.namedWindow(GAME_TITLE, cv.WINDOW_GUI_NORMAL)
 
-    cv.createTrackbar('thickness', GAME_TITLE, 3, 100, null_fn)
-    cv.createTrackbar('white_noise', GAME_TITLE, 3, 50, null_fn)
+    cv.createTrackbar('contour_thickness', GAME_TITLE, 3, 100, null_fn)
+    cv.createTrackbar('white_noise_remover', GAME_TITLE, 3, 50, null_fn)
     cv.createTrackbar('min growth', GAME_TITLE, 0, 500, null_fn)
-    cv.createTrackbar('dilation', GAME_TITLE, 0, 40, null_fn)
-    cv.createTrackbar('opening', GAME_TITLE, 0, 20, null_fn)
-    cv.createTrackbar('use hull', GAME_TITLE, 0, 1, null_fn)
+    cv.createTrackbar('max growth', GAME_TITLE, 0, 5000, null_fn)
+    # cv.createTrackbar('dilation', GAME_TITLE, 0, 40, null_fn)
+    # cv.createTrackbar('opening', GAME_TITLE, 0, 20, null_fn)
     cv.createTrackbar('well shadow', GAME_TITLE, 10, 70, null_fn)
-    # cv.createTrackbar('max avg pixel intensity', GAME_TITLE, 0, 255, null_fn)
 
     # default positions
-    cv.setTrackbarPos('thickness', GAME_TITLE, 17)
-    cv.setTrackbarPos('white_noise', GAME_TITLE, 6)
+    cv.setTrackbarPos('contour_thickness', GAME_TITLE, 17)
+    cv.setTrackbarPos('white_noise_remover', GAME_TITLE, 6)
     cv.setTrackbarPos('min growth', GAME_TITLE, 28)
+    cv.setTrackbarPos('max growth', GAME_TITLE, 1000)
     cv.setTrackbarPos('well shadow', GAME_TITLE, 14)
-    # cv.setTrackbarPos('max avg pixel intensity', GAME_TITLE, 120)
-    cv.setTrackbarPos('dilation', GAME_TITLE, 20)
-    cv.setTrackbarPos('opening', GAME_TITLE, 0)
-    cv.setTrackbarPos('use hull', GAME_TITLE, 0)
+
+    # cv.setTrackbarPos('dilation', GAME_TITLE, 20)
+    # cv.setTrackbarPos('opening', GAME_TITLE, 0)
 
 
-    calls = ["filepath,thickness,white_noise,area_threshold,growth,nb_of_contours,pass_or_fail"]
+
+    calls = ["filepath,contour_thickness,white_noise_remover,area_threshold,growth,nb_of_contours,pass_or_fail"]
     well_no = 0
     while well_no < len(wells_paths):
         well_path = wells_paths[well_no]
@@ -110,13 +110,11 @@ if __name__ == "__main__":
             if circs is not None:
                 #print(len(circs), len(circs[0]), "inner circles")
                 for cs in circs:
-                    #print(cs)
                     for c in cs:
                         x, y, r = c
                         r = int(r)
                         x = int(x)
                         y = int(y)
-                        #cv.circle(well2, (x, y), r, 255, thickness=1)
                         mask = np.zeros(well2.shape, np.uint8)
                         cv.circle(mask, (x, y), r, 255, thickness=-1)
                         well2 = cv.bitwise_and(well2, well2, mask=mask)
@@ -124,48 +122,42 @@ if __name__ == "__main__":
             blnk = well2.copy()
             img_blnk = img_border.copy()
             img_blnk_gray = cv.cvtColor(img_blnk, cv.COLOR_BGR2GRAY)
-            thickness = cv.getTrackbarPos('thickness', GAME_TITLE)
-            if thickness % 2 != 1:
-                thickness += 1
-            if thickness < 3:
-                thickness = 3
-            white_noise = cv.getTrackbarPos('white_noise', GAME_TITLE)
-            area_thresh = cv.getTrackbarPos('min growth', GAME_TITLE)
-            dilation = cv.getTrackbarPos('dilation', GAME_TITLE) - 20
-            opening = cv.getTrackbarPos('opening', GAME_TITLE)
-            use_hull = cv.getTrackbarPos('use hull', GAME_TITLE)
+            contour_thickness = cv.getTrackbarPos('contour_thickness', GAME_TITLE)
+            if contour_thickness % 2 != 1:
+                contour_thickness += 1
+            if contour_thickness < 3:
+                contour_thickness = 3
+            white_noise_remover = cv.getTrackbarPos('white_noise_remover', GAME_TITLE)
+            min_area_thresh = cv.getTrackbarPos('min growth', GAME_TITLE)
+            max_area_thresh = cv.getTrackbarPos('max growth', GAME_TITLE)
+            # dilation = cv.getTrackbarPos('dilation', GAME_TITLE) - 20
+            # opening = cv.getTrackbarPos('opening', GAME_TITLE)
 
             # max_avg_pixel_intensity = cv.getTrackbarPos('max avg pixel intensity', GAME_TITLE)
-            blnk = cv.adaptiveThreshold(blnk, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, thickness, white_noise)
+            blnk = cv.adaptiveThreshold(blnk, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, contour_thickness, white_noise_remover)
 
-            if dilation > 0:
-                kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (dilation, dilation))
-                blnk = cv.dilate(blnk, kernel, 1)
-            elif dilation < 0:
-                kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (-dilation, -dilation))
-                blnk = cv.erode(blnk, kernel, 1)
-
-            if opening > 0:
-                kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (opening, opening))
-                blnk = cv.morphologyEx(blnk, cv.MORPH_OPEN, kernel)
+            # if dilation > 0:
+            #     kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (dilation, dilation))
+            #     blnk = cv.dilate(blnk, kernel, 1)
+            # elif dilation < 0:
+            #     kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (-dilation, -dilation))
+            #     blnk = cv.erode(blnk, kernel, 1)
+            #
+            # if opening > 0:
+            #     kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (opening, opening))
+            #     blnk = cv.morphologyEx(blnk, cv.MORPH_OPEN, kernel)
 
             mask = np.zeros(well2.shape, np.uint8)
 
-            contours = cv.findContours(blnk, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-            if use_hull==1:
-                contours = [[cv.convexHull(cnt, False) for cnt in contours[0]]]
+            contours = cv.findContours(blnk, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
 
             total_area = 0
             n_contours = 0
             color_index = 0
             for cnt in contours[0]:
                 area = cv.contourArea(cnt)
-                contour_has_good_area = area > area_thresh and area < 8000
+                contour_has_good_area = area >= min_area_thresh and area <= max_area_thresh
                 if contour_has_good_area:
-                    # contour_avg_pixel_intensity = get_avg_pixel_intensity_for_contour(img_blnk_gray, cnt)
-                    #
-                    # contour_has_good_pixel_intensity = contour_avg_pixel_intensity <= max_avg_pixel_intensity
-                    # if contour_has_good_pixel_intensity:
                     color_index, color = get_color(color_index)
                     cv.drawContours(img_blnk, [cnt], -1, color, 1)
                     total_area += area
@@ -186,22 +178,19 @@ if __name__ == "__main__":
                     flags.remove('BUBBLE')
                 else:
                     flags.add('BUBBLE')
-
             elif key == ord('c'):
                 if 'COND' in flags:
                     flags.remove('COND')
                 else:
                     flags.add('COND')
-
             elif key == ord('d'):
                 if 'DRY' in flags:
                     flags.remove('DRY')
                 else:
                     flags.add('DRY')
-
             elif key == ord('n'):
                 flags = ':'.join(flags)
-                call = f"{well_path},{thickness},{white_noise},{area_thresh},{total_area},{n_contours},PASS,{flags}"
+                call = f"{well_path},{contour_thickness},{white_noise_remover},{min_area_thresh},{total_area},{n_contours},PASS,{flags}"
                 calls.append(call)
                 well_no += 1
                 hp += 1
@@ -209,7 +198,7 @@ if __name__ == "__main__":
                 break
             elif key == ord('f'):
                 flags = ':'.join(flags)
-                call = f"{well_path},{thickness},{white_noise},{area_thresh},{total_area},{n_contours},FAIL,{flags}"
+                call = f"{well_path},{contour_thickness},{white_noise_remover},{min_area_thresh},{total_area},{n_contours},FAIL,{flags}"
                 calls.append(call)
                 well_no += 1
                 hp += 1
