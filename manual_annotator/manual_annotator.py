@@ -76,6 +76,7 @@ if __name__ == "__main__":
     cv.createTrackbar('min growth', GAME_TITLE, 0, 500, null_fn)
     cv.createTrackbar('dilation', GAME_TITLE, 0, 40, null_fn)
     cv.createTrackbar('opening', GAME_TITLE, 0, 20, null_fn)
+    cv.createTrackbar('use hull', GAME_TITLE, 0, 1, null_fn)
     # cv.createTrackbar('well shadow', GAME_TITLE, 10, 70, null_fn)
     # cv.createTrackbar('max avg pixel intensity', GAME_TITLE, 0, 255, null_fn)
 
@@ -87,6 +88,7 @@ if __name__ == "__main__":
     # cv.setTrackbarPos('max avg pixel intensity', GAME_TITLE, 120)
     cv.setTrackbarPos('dilation', GAME_TITLE, 20)
     cv.setTrackbarPos('opening', GAME_TITLE, 0)
+    cv.setTrackbarPos('use hull', GAME_TITLE, 0)
 
 
     calls = ["filepath,thickness,white_noise,area_threshold,growth,nb_of_contours,pass_or_fail"]
@@ -131,6 +133,7 @@ if __name__ == "__main__":
             area_thresh = cv.getTrackbarPos('min growth', GAME_TITLE)
             dilation = cv.getTrackbarPos('dilation', GAME_TITLE) - 20
             opening = cv.getTrackbarPos('opening', GAME_TITLE)
+            use_hull = cv.getTrackbarPos('use hull', GAME_TITLE)
 
             # max_avg_pixel_intensity = cv.getTrackbarPos('max avg pixel intensity', GAME_TITLE)
             blnk = cv.adaptiveThreshold(blnk, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, thickness, white_noise)
@@ -149,6 +152,9 @@ if __name__ == "__main__":
             mask = np.zeros(well2.shape, np.uint8)
 
             contours = cv.findContours(blnk, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+            if use_hull==1:
+                contours = [[cv.convexHull(cnt, False) for cnt in contours[0]]]
+
             total_area = 0
             n_contours = 0
             color_index = 0
