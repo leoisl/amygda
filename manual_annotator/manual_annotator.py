@@ -13,14 +13,12 @@ GAME_TITLE = 'Bug Lasso'
 colors=[(255,0,0), (0,255,0), (0,0,255),
             (255,255,0), (255,0,255),
             (0,255,255)]
-color_index = 0
-def get_color():
-    global colors, color_index
+def get_color(color_index):
     if color_index == len(colors):
         color_index = 0
     color = colors[color_index]
     color_index+=1
-    return color
+    return color_index, color
 
 
 def status(calls):
@@ -153,6 +151,7 @@ if __name__ == "__main__":
             contours = cv.findContours(blnk, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
             total_area = 0
             n_contours = 0
+            color_index = 0
             for cnt in contours[0]:
                 area = cv.contourArea(cnt)
                 contour_has_good_area = area > area_thresh and area < 500
@@ -161,7 +160,8 @@ if __name__ == "__main__":
                     #
                     # contour_has_good_pixel_intensity = contour_avg_pixel_intensity <= max_avg_pixel_intensity
                     # if contour_has_good_pixel_intensity:
-                    cv.drawContours(img_blnk, [cnt], -1, get_color(), 1)
+                    color_index, color = get_color(color_index)
+                    cv.drawContours(img_blnk, [cnt], -1, color, 1)
                     total_area += area
                     n_contours += 1
 
