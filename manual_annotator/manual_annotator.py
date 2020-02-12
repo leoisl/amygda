@@ -13,6 +13,12 @@ GAME_TITLE = 'Bug Lasso'
 colors=[(255,0,0), (0,255,0), (0,0,255),
             (255,255,0), (255,0,255),
             (0,255,255)]
+
+# TODO: control multithreaded access?
+good_contours=[]
+forbidden_contours=[]
+
+
 def get_color(color_index):
     if color_index == len(colors):
         color_index = 0
@@ -40,6 +46,21 @@ def save_rows(calls, out_file):
 
 def null_fn(x):
     pass
+
+def mouse_callback(event, x, y, flags, params):
+    global good_contours, forbidden_contours
+    if event==1:
+        for cnt in good_contours:
+            if cv.pointPolygonTest(cnt, (x,y), False) >= 0:
+                if not is_a_forbidden_contours(cnt):
+                    forbidden_contours.append(cnt)
+    elif event==2:
+        forbidden_contours = []
+
+
+def is_a_forbidden_contours(cnt):
+    global forbidden_contours
+    return any(np.array_equal(cnt, x) for x in forbidden_contours)
 
 
 def get_args():
@@ -70,6 +91,7 @@ if __name__ == "__main__":
     wells_paths = pd.read_csv(args.wells_csv)["wells"]
 
     cv.namedWindow(GAME_TITLE, cv.WINDOW_GUI_NORMAL)
+    cv.setMouseCallback(GAME_TITLE, mouse_callback)
 
     cv.createTrackbar('contour_thickness', GAME_TITLE, 3, 100, null_fn)
     cv.createTrackbar('white_noise_remover', GAME_TITLE, 3, 50, null_fn)
@@ -97,18 +119,18 @@ if __name__ == "__main__":
         well_path = wells_paths[well_no]
         well = cv.imread(well_path)
         flags = set([])
+        forbidden_contours = []
 
         while True:
             p4 = cv.getTrackbarPos('well shadow', GAME_TITLE)
             if p4 < 1:
                 p4=1
-            b = 20
+            b = 40
             img_border = cv.copyMakeBorder(well, b, b, b, b, cv.BORDER_CONSTANT, 0)
             well2 = cv.cvtColor(well, cv.COLOR_BGR2GRAY)
             well2 = cv.copyMakeBorder(well2, b, b, b, b, cv.BORDER_CONSTANT, 0)
             circs = cv.HoughCircles(well2, cv.HOUGH_GRADIENT, 1, 1, param1=20, param2=p4, minRadius=37, maxRadius=42)
             if circs is not None:
-                #print(len(circs), len(circs[0]), "inner circles")
                 for cs in circs:
                     for c in cs:
                         x, y, r = c
@@ -149,25 +171,30 @@ if __name__ == "__main__":
 
             mask = np.zeros(well2.shape, np.uint8)
 
-            contours = cv.findContours(blnk, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
-
+            contours = cv.findContours(blnk, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)[0]
             total_area = 0
             n_contours = 0
             color_index = 0
-            for cnt in contours[0]:
+
+            good_contours = []
+            for cnt in contours:
                 area = cv.contourArea(cnt)
                 contour_has_good_area = area >= min_area_thresh and area <= max_area_thresh
-                if contour_has_good_area:
+                if contour_has_good_area and not is_a_forbidden_contours(cnt):
                     color_index, color = get_color(color_index)
                     cv.drawContours(img_blnk, [cnt], -1, color, 1)
                     total_area += area
                     n_contours += 1
+                    good_contours.append(cnt)
 
             font = cv.FONT_HERSHEY_SIMPLEX
-            img_blnk = cv.putText(img_blnk, str(total_area), (0, img_blnk.shape[1] - 5), font, 0.7, (0, 255, 0), 1)  # , cv.LINE_AA)
+            img_blnk = cv.putText(img_blnk, f"Growth: {total_area}", (0, img_blnk.shape[1] - 5), font, 0.7, (0, 255, 0), 1)  # , cv.LINE_AA)
             img_blnk = cv.putText(img_blnk, ','.join(flags), (0, 12), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
+            if len(forbidden_contours):
+                img_blnk = cv.putText(img_blnk, f"{len(forbidden_contours)} REMOVED", (0, 28), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
 
             cv.imshow(GAME_TITLE, img_blnk)
+
 
             key = cv.waitKey(1)
             if key == 27:
