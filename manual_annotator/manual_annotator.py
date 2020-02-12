@@ -1,13 +1,8 @@
-import random
-import os
 import numpy as np
 import cv2 as cv
 import pandas as pd
 import argparse
 
-game_items = ['🧲', '🐚', '🦷', '🦴', '🗿', '🍍', '🥀']
-items = []
-hp = 0
 GAME_TITLE = 'Bug Lasso'
 
 colors=[(255,0,0), (0,255,0), (0,0,255),
@@ -25,16 +20,6 @@ def get_color(color_index):
     color = colors[color_index]
     color_index+=1
     return color_index, color
-
-
-def status(calls):
-    os.system('clear')
-    for line in calls:
-        print(line)
-    print("Items: ", '  '.join(items))
-    print(f"Score: {hp}")
-    if random.randint(0,20) == 15:
-        print(random.choice(["wow!!", "almost there!!!", "damn! you're good"]))
 
 
 def save_rows(calls, out_file):
@@ -220,22 +205,16 @@ if __name__ == "__main__":
                 call = f"{well_path},{contour_thickness},{white_noise_remover},{min_area_thresh},{total_area},{n_contours},PASS,{flags}"
                 calls.append(call)
                 well_no += 1
-                hp += 1
-                status(calls)
                 break
             elif key == ord('f'):
                 flags = ':'.join(flags)
                 call = f"{well_path},{contour_thickness},{white_noise_remover},{min_area_thresh},{total_area},{n_contours},FAIL,{flags}"
                 calls.append(call)
                 well_no += 1
-                hp += 1
-                status(calls)
                 break
             elif key == ord('p'):
                 calls = calls[:-1]
                 well_no -= 1
-                hp -= 1
-                status(calls)
                 break
 
     save_rows(calls, args.output_csv)
