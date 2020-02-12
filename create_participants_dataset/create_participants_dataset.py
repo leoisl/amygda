@@ -146,7 +146,6 @@ def put_wells_in_dirs(wells, dir):
     random.shuffle(wells)
     for well in wells:
         new_well_name = re.match(".*/(\d+(_filtered)?/.*\.png)", well).group(1)
-        print(new_well_name)
         new_well_name = new_well_name.replace("/", "_")
         new_well_path = dir/new_well_name
         shutil.copy(well, new_well_path)
@@ -176,12 +175,21 @@ def create_participants_datasets_in_disk(participant_index_to_list_of_its_wells,
 
 
 
+def force_add_control_wells_to_participants_list(force_add_controls_csv, participant_index_to_list_of_its_wells, use_filtered_images):
+    controls_csv = pd.read_csv(force_add_controls_csv)
+    all_control_wells = get_all_control_wells(controls_csv, use_filtered_images)
+    nb_of_participants = len(participant_index_to_list_of_its_wells)
+    nb_of_control_wells_per_part = int(len(all_control_wells) / nb_of_participants)
+    add_control_wells_for_each_participant(participant_index_to_list_of_its_wells,
+                                           all_control_wells,
+                                           nb_of_control_wells_per_part)
+
 
 def create_participants_dataset(all_plates_translation_csv_filepath, number_of_participants,
                                 nb_of_wells_per_part,
                                 percentage_of_images_from_control_wells,
                                 percentage_of_shared_control_well_between_participants,
-                                output_dir, use_filtered_images):
+                                output_dir, use_filtered_images, force_add_controls_csv):
     all_plates_translation_csv = pd.read_csv(all_plates_translation_csv_filepath)
     total_number_of_wells = get_total_number_of_wells(all_plates_translation_csv)
     max_number_of_wells_per_part = int(total_number_of_wells / number_of_participants)
@@ -209,6 +217,9 @@ def create_participants_dataset(all_plates_translation_csv_filepath, number_of_p
         print("You dont have enough wells for what you have asked, change params")
         os._exit(1)
 
+    if force_add_controls_csv != None:
+        force_add_control_wells_to_participants_list(force_add_controls_csv, participant_index_to_list_of_its_wells, use_filtered_images)
+
     create_participants_datasets_in_disk(participant_index_to_list_of_its_wells, participant_index_to_list_of_its_extra_control_wells,
                                          output_dir)
 
@@ -227,6 +238,7 @@ def get_args():
     parser.add_argument('--output_dir', type=str, help='Directory to output the participants dataset', required=True)
     parser.add_argument('--filtered', action="store_true", help='Use the filtered images', default=False)
     parser.add_argument('--seed', type=int, help='Seed for random values', default=-1)
+    parser.add_argument('--force_add_controls_csv', type=str, help='The control wells in this file will be forcedly distributed to the participants')
     args = parser.parse_args()
     return args
 
@@ -241,11 +253,12 @@ if __name__ == "__main__":
     output_dir = Path(args.output_dir)
     use_filtered_images = args.filtered
     seed = args.seed
+    force_add_controls_csv = args.force_add_controls_csv
     if seed != -1:
         random.seed(seed)
     create_participants_dataset(all_plates_translation_csv_filepath, number_of_participants,
                                 nb_of_wells_per_part,
                                 percentage_of_images_from_control_wells,
                                 percentage_of_shared_control_well_between_participants,
-                                output_dir, use_filtered_images)
+                                output_dir, use_filtered_images, force_add_controls_csv)
 
