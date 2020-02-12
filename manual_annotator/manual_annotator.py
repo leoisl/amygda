@@ -63,15 +63,15 @@ if __name__ == "__main__":
     cv.createTrackbar('thickness', GAME_TITLE, 3, 100, null_fn)
     cv.createTrackbar('white_noise', GAME_TITLE, 3, 50, null_fn)
     cv.createTrackbar('min growth', GAME_TITLE, 0, 500, null_fn)
-    cv.createTrackbar('well shadow', GAME_TITLE, 10, 70, null_fn)
-    cv.createTrackbar('max avg pixel intensity', GAME_TITLE, 0, 255, null_fn)
+    # cv.createTrackbar('well shadow', GAME_TITLE, 10, 70, null_fn)
+    # cv.createTrackbar('max avg pixel intensity', GAME_TITLE, 0, 255, null_fn)
 
     # default positions
     cv.setTrackbarPos('thickness', GAME_TITLE, 17)
     cv.setTrackbarPos('white_noise', GAME_TITLE, 6)
     cv.setTrackbarPos('min growth', GAME_TITLE, 28)
-    cv.setTrackbarPos('well shadow', GAME_TITLE, 14)
-    cv.setTrackbarPos('max avg pixel intensity', GAME_TITLE, 120)
+    # cv.setTrackbarPos('well shadow', GAME_TITLE, 14)
+    # cv.setTrackbarPos('max avg pixel intensity', GAME_TITLE, 120)
    
     calls = ["filepath,thickness,white_noise,area_threshold,growth,nb_of_contours,pass_or_fail"]
     well_no = 0
@@ -81,27 +81,27 @@ if __name__ == "__main__":
         flags = set([])
 
         while True:
-            p4 = cv.getTrackbarPos('well shadow', GAME_TITLE)
-            if p4 < 1:
-                p4=1
+            # p4 = cv.getTrackbarPos('well shadow', GAME_TITLE)
+            # if p4 < 1:
+            #     p4=1
             b = 20
             img_border = cv.copyMakeBorder(well, b, b, b, b, cv.BORDER_CONSTANT, 0)
             well2 = cv.cvtColor(well, cv.COLOR_BGR2GRAY)
             well2 = cv.copyMakeBorder(well2, b, b, b, b, cv.BORDER_CONSTANT, 0)
-            circs = cv.HoughCircles(well2, cv.HOUGH_GRADIENT, 1, 1, param1=20, param2=p4, minRadius=37, maxRadius=42)
-            if circs is not None:
-                #print(len(circs), len(circs[0]), "inner circles")
-                for cs in circs:
-                    #print(cs)
-                    for c in cs:
-                        x, y, r = c
-                        r = int(r)
-                        x = int(x)
-                        y = int(y)
-                        #cv.circle(well2, (x, y), r, 255, thickness=1)
-                        mask = np.zeros(well2.shape, np.uint8)
-                        cv.circle(mask, (x, y), r, 255, thickness=-1)
-                        well2 = cv.bitwise_and(well2, well2, mask=mask)
+            # circs = cv.HoughCircles(well2, cv.HOUGH_GRADIENT, 1, 1, param1=20, param2=p4, minRadius=37, maxRadius=42)
+            # if circs is not None:
+            #     #print(len(circs), len(circs[0]), "inner circles")
+            #     for cs in circs:
+            #         #print(cs)
+            #         for c in cs:
+            #             x, y, r = c
+            #             r = int(r)
+            #             x = int(x)
+            #             y = int(y)
+            #             #cv.circle(well2, (x, y), r, 255, thickness=1)
+            #             mask = np.zeros(well2.shape, np.uint8)
+            #             cv.circle(mask, (x, y), r, 255, thickness=-1)
+            #             well2 = cv.bitwise_and(well2, well2, mask=mask)
 
             blnk = well2.copy()
             img_blnk = img_border.copy()
@@ -113,7 +113,7 @@ if __name__ == "__main__":
                 thickness = 3
             white_noise = cv.getTrackbarPos('white_noise', GAME_TITLE)
             area_thresh = cv.getTrackbarPos('min growth', GAME_TITLE)
-            max_avg_pixel_intensity = cv.getTrackbarPos('max avg pixel intensity', GAME_TITLE)
+            # max_avg_pixel_intensity = cv.getTrackbarPos('max avg pixel intensity', GAME_TITLE)
             blnk = cv.adaptiveThreshold(blnk, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, thickness, white_noise)
             mask = np.zeros(well2.shape, np.uint8)
 
@@ -124,15 +124,14 @@ if __name__ == "__main__":
                 area = cv.contourArea(cnt)
                 contour_has_good_area = area > area_thresh and area < 500
                 if contour_has_good_area:
-                    contour_avg_pixel_intensity = get_avg_pixel_intensity_for_contour(img_blnk_gray, cnt)
-
-                    contour_has_good_pixel_intensity = contour_avg_pixel_intensity <= max_avg_pixel_intensity
-                    if contour_has_good_pixel_intensity:
-                        cv.drawContours(img_blnk, [cnt], -1, (0, 255, 0), 1)
-                        total_area += area
-                        n_contours += 1
-                       #break
-
+                    # contour_avg_pixel_intensity = get_avg_pixel_intensity_for_contour(img_blnk_gray, cnt)
+                    #
+                    # contour_has_good_pixel_intensity = contour_avg_pixel_intensity <= max_avg_pixel_intensity
+                    # if contour_has_good_pixel_intensity:
+                    cv.drawContours(img_blnk, [cnt], -1, (0, 255, 0), 1)
+                    total_area += area
+                    n_contours += 1
+ 
             font = cv.FONT_HERSHEY_SIMPLEX
             img_blnk = cv.putText(img_blnk, str(total_area), (0, img_blnk.shape[1] - 5), font, 0.7, (0, 255, 0), 1)  # , cv.LINE_AA)
             img_blnk = cv.putText(img_blnk, ','.join(flags), (0, 12), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
