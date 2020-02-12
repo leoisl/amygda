@@ -55,13 +55,18 @@ def get_args():
     args = parser.parse_args()
     return args
 
+def window_is_closed():
+    return cv.getWindowProperty(GAME_TITLE, cv.WND_PROP_VISIBLE) == 0.0
 
+def maximize_window():
+    cv.setWindowProperty(GAME_TITLE, cv.WND_PROP_FULLSCREEN, 1.0)
 
 if __name__ == "__main__":
     args = get_args()
     wells_paths = pd.read_csv(args.wells_csv)["wells"]
 
     cv.namedWindow(GAME_TITLE, cv.WINDOW_GUI_NORMAL)
+    maximize_window()
     cv.setMouseCallback(GAME_TITLE, mouse_callback)
 
     cv.createTrackbar('contour_thickness', GAME_TITLE, 3, 100, null_fn)
@@ -86,13 +91,13 @@ if __name__ == "__main__":
 
     calls = ["filepath,contour_thickness,white_noise_remover,area_threshold,growth,nb_of_contours,pass_or_fail"]
     well_no = 0
-    while well_no < len(wells_paths):
+    while well_no < len(wells_paths) and not window_is_closed():
         well_path = wells_paths[well_no]
         well = cv.imread(well_path)
         flags = set([])
         forbidden_contours = []
 
-        while True:
+        while True and not window_is_closed():
             p4 = cv.getTrackbarPos('well shadow', GAME_TITLE)
             if p4 < 1:
                 p4=1
