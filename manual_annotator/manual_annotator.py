@@ -58,8 +58,9 @@ def window_is_closed():
 def maximize_window():
     cv.setWindowProperty(GAME_TITLE, cv.WND_PROP_FULLSCREEN, 1.0)
 
-def show_images(img1, img2):
-    image_to_show = np.hstack((img1, img2))
+def show_images(human_vision, computer_vision, hotkey_image):
+    image_to_show = np.hstack((human_vision, computer_vision))
+    image_to_show = np.vstack((image_to_show, hotkey_image))
     cv.imshow(GAME_TITLE, image_to_show)
 
 
@@ -157,47 +158,53 @@ if __name__ == "__main__":
                     good_contours.append(cnt)
 
 
-            # write info to well_with_border
+            # write info to images
             font = cv.FONT_HERSHEY_SIMPLEX
             well_with_border = cv.putText(well_with_border, f"Growth: {total_area}", (0, well_with_border.shape[1] - 5), font, 0.7, (0, 255, 0), 1)  # , cv.LINE_AA)
             well_with_border = cv.putText(well_with_border, ','.join(flags), (0, 12), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
             if len(forbidden_contours):
                 img_blnk = cv.putText(well_with_border, f"{len(forbidden_contours)} REMOVED", (0, 28), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
 
+            hotkeys_image = np.full(shape=(70, well_with_border.shape[1]+binarized_image_with_color.shape[1]),
+                                    fill_value=np.uint8(255))
+            hotkeys_image = cv.cvtColor(hotkeys_image, cv.COLOR_GRAY2BGR)
+            hotkeys_image = cv.putText(hotkeys_image, "[Enter]=Confirm; [F]=Fail; [P]=Previous;", (1, 20), font, 0.5, (0, 0, 0), 1)
+            hotkeys_image = cv.putText(hotkeys_image, "[B]=Bubble; [C]=Cond; [D]=Dry well;", (1, 40), font, 0.5, (0, 0, 0), 1)
+            hotkeys_image = cv.putText(hotkeys_image, "[ESC]=Save and quit;", (1, 60), font, 0.5, (0, 0, 0), 1)
 
-            show_images(well_with_border, binarized_image_with_color)
+            show_images(well_with_border, binarized_image_with_color, hotkeys_image)
 
 
             key = cv.waitKey(25)
             if key == 27: # esc
                 save_rows(calls_csv, args.output_csv)
                 exit()
-            elif key == ord('b'):
+            elif key == ord('b') or key == ord('B'):
                 if 'BUBBLE' in flags:
                     flags.remove('BUBBLE')
                 else:
                     flags.add('BUBBLE')
-            elif key == ord('c'):
+            elif key == ord('c') or key == ord('C'):
                 if 'COND' in flags:
                     flags.remove('COND')
                 else:
                     flags.add('COND')
-            elif key == ord('d'):
+            elif key == ord('d') or key == ord('D'):
                 if 'DRY' in flags:
                     flags.remove('DRY')
                 else:
                     flags.add('DRY')
-            elif key == ord('n'):
+            elif key == 13: # enter
                 flags = ':'.join(flags)
                 calls_csv.loc[well_path] = [contour_thickness, white_noise_remover, min_area_thresh, total_area, n_contours, "PASS", flags]
                 well_no += 1
                 break
-            elif key == ord('f'):
+            elif key == ord('f') or key == ord('F'):
                 flags = ':'.join(flags)
                 calls_csv.loc[well_path] = [contour_thickness, white_noise_remover, min_area_thresh, total_area, n_contours, "FAIL", flags]
                 well_no += 1
                 break
-            elif key == ord('p'):
+            elif key == ord('p') or key == ord('P'):
                 if well_no > 0: well_no -= 1
                 break
 
