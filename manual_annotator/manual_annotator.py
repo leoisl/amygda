@@ -63,6 +63,7 @@ if __name__ == "__main__":
     cv.createTrackbar('thickness', GAME_TITLE, 3, 100, null_fn)
     cv.createTrackbar('white_noise', GAME_TITLE, 3, 50, null_fn)
     cv.createTrackbar('min growth', GAME_TITLE, 0, 500, null_fn)
+    cv.createTrackbar('dilation', GAME_TITLE, 0, 40, null_fn)
     # cv.createTrackbar('well shadow', GAME_TITLE, 10, 70, null_fn)
     # cv.createTrackbar('max avg pixel intensity', GAME_TITLE, 0, 255, null_fn)
 
@@ -72,7 +73,9 @@ if __name__ == "__main__":
     cv.setTrackbarPos('min growth', GAME_TITLE, 28)
     # cv.setTrackbarPos('well shadow', GAME_TITLE, 14)
     # cv.setTrackbarPos('max avg pixel intensity', GAME_TITLE, 120)
-   
+    cv.setTrackbarPos('dilation', GAME_TITLE, 20)
+
+
     calls = ["filepath,thickness,white_noise,area_threshold,growth,nb_of_contours,pass_or_fail"]
     well_no = 0
     while well_no < len(wells_paths):
@@ -113,8 +116,18 @@ if __name__ == "__main__":
                 thickness = 3
             white_noise = cv.getTrackbarPos('white_noise', GAME_TITLE)
             area_thresh = cv.getTrackbarPos('min growth', GAME_TITLE)
+            dilation = cv.getTrackbarPos('dilation', GAME_TITLE) - 20
+
             # max_avg_pixel_intensity = cv.getTrackbarPos('max avg pixel intensity', GAME_TITLE)
             blnk = cv.adaptiveThreshold(blnk, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, thickness, white_noise)
+
+            if dilation > 0:
+                kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (dilation, dilation))
+                blnk = cv.dilate(blnk, kernel, 1)
+            elif dilation < 0:
+                kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (-dilation, -dilation))
+                blnk = cv.erode(blnk, kernel, 1)
+
             mask = np.zeros(well2.shape, np.uint8)
 
             contours = cv.findContours(blnk, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
@@ -131,7 +144,7 @@ if __name__ == "__main__":
                     cv.drawContours(img_blnk, [cnt], -1, (0, 255, 0), 1)
                     total_area += area
                     n_contours += 1
- 
+
             font = cv.FONT_HERSHEY_SIMPLEX
             img_blnk = cv.putText(img_blnk, str(total_area), (0, img_blnk.shape[1] - 5), font, 0.7, (0, 255, 0), 1)  # , cv.LINE_AA)
             img_blnk = cv.putText(img_blnk, ','.join(flags), (0, 12), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
