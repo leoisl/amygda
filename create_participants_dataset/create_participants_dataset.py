@@ -226,6 +226,7 @@ def get_args():
                         required=True)
     parser.add_argument('--output_dir', type=str, help='Directory to output the participants dataset', required=True)
     parser.add_argument('--filtered', action="store_true", help='Use the filtered images', default=False)
+    parser.add_argument('--seed', type=int, help='Seed for random values', default=-1)
     args = parser.parse_args()
     return args
 
@@ -239,6 +240,9 @@ if __name__ == "__main__":
     nb_of_wells_per_part = args.nb_of_wells_per_part
     output_dir = Path(args.output_dir)
     use_filtered_images = args.filtered
+    seed = args.seed
+    if seed != -1:
+        random.seed(seed)
     create_participants_dataset(all_plates_translation_csv_filepath, number_of_participants,
                                 nb_of_wells_per_part,
                                 percentage_of_images_from_control_wells,
