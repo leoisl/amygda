@@ -39,6 +39,21 @@ def get_args():
     return args
 
 
+def get_avg_pixel_intensity_for_contour(image, contour):
+    intensities = []
+    x_rect, y_rect, w_rect, h_rect = cv.boundingRect(contour)
+
+    for x in range(int(x_rect), int(x_rect+w_rect+1)):
+        for y in range(int(y_rect), int(y_rect+h_rect+1)):
+            point_in_contour = cv.pointPolygonTest(contour, (x,y), False) == 1.0
+            if point_in_contour:
+                intensities.append(image[y][x])
+
+    if len(intensities) == 0:
+        return 255
+    else:
+        return np.mean(intensities)
+
 if __name__ == "__main__":
     args = get_args()
     wells_paths = pd.read_csv(args.wells_csv)["wells"]
@@ -49,12 +64,14 @@ if __name__ == "__main__":
     cv.createTrackbar('p2', GAME_TITLE, 3, 20, null_fn)
     cv.createTrackbar('min growth', GAME_TITLE, 0, 500, null_fn)
     cv.createTrackbar('well shadow', GAME_TITLE, 10, 70, null_fn)
+    cv.createTrackbar('max avg pixel intensity', GAME_TITLE, 0, 255, null_fn)
 
     # default positions
     cv.setTrackbarPos('p1', GAME_TITLE, 17)
     cv.setTrackbarPos('p2', GAME_TITLE, 6)
     cv.setTrackbarPos('min growth', GAME_TITLE, 28)
     cv.setTrackbarPos('well shadow', GAME_TITLE, 14)
+    cv.setTrackbarPos('max avg pixel intensity', GAME_TITLE, 120)
    
     calls = ["filepath,p1,p2,area_threshold,growth,nb_of_contours,pass_or_fail"]
     well_no = 0
@@ -88,6 +105,7 @@ if __name__ == "__main__":
 
             blnk = well2.copy()
             img_blnk = img_border.copy()
+            img_blnk_gray = cv.cvtColor(img_blnk, cv.COLOR_BGR2GRAY)
             p1 = cv.getTrackbarPos('p1', GAME_TITLE)
             if p1 % 2 != 1:
                 p1 += 1
@@ -95,6 +113,7 @@ if __name__ == "__main__":
                 p1 = 3
             p2 = cv.getTrackbarPos('p2', GAME_TITLE)
             area_thresh = cv.getTrackbarPos('min growth', GAME_TITLE)
+            max_avg_pixel_intensity = cv.getTrackbarPos('max avg pixel intensity', GAME_TITLE)
             blnk = cv.adaptiveThreshold(blnk, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, p1, p2)
             mask = np.zeros(well2.shape, np.uint8)
 
@@ -103,11 +122,16 @@ if __name__ == "__main__":
             n_contours = 0
             for c in contours[0]:
                 area = cv.contourArea(c)
-                if area > area_thresh and area < 500:
-                    cv.drawContours(img_blnk, [c], -1, (0, 255, 0), 1)
-                    total_area += area
-                    n_contours += 1
-                   #break
+                contour_has_good_area = area > area_thresh and area < 500
+                if contour_has_good_area:
+                    contour_avg_pixel_intensity = get_avg_pixel_intensity_for_contour(img_blnk_gray, c)
+
+                    contour_has_good_pixel_intensity = contour_avg_pixel_intensity <= max_avg_pixel_intensity
+                    if contour_has_good_pixel_intensity:
+                        cv.drawContours(img_blnk, [c], -1, (0, 255, 0), 1)
+                        total_area += area
+                        n_contours += 1
+                       #break
 
             font = cv.FONT_HERSHEY_SIMPLEX
             img_blnk = cv.putText(img_blnk, str(total_area), (0, img_blnk.shape[1] - 5), font, 0.7, (0, 255, 0), 1)  # , cv.LINE_AA)
