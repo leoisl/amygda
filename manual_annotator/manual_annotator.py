@@ -73,8 +73,6 @@ if __name__ == "__main__":
     cv.createTrackbar('white_noise_remover', GAME_TITLE, 3, 50, null_fn)
     cv.createTrackbar('min growth', GAME_TITLE, 0, 500, null_fn)
     cv.createTrackbar('max growth', GAME_TITLE, 0, 5000, null_fn)
-    # cv.createTrackbar('dilation', GAME_TITLE, 0, 40, null_fn)
-    # cv.createTrackbar('opening', GAME_TITLE, 0, 20, null_fn)
     cv.createTrackbar('well shadow', GAME_TITLE, 10, 70, null_fn)
 
     # default positions
@@ -83,10 +81,6 @@ if __name__ == "__main__":
     cv.setTrackbarPos('min growth', GAME_TITLE, 28)
     cv.setTrackbarPos('max growth', GAME_TITLE, 1000)
     cv.setTrackbarPos('well shadow', GAME_TITLE, 14)
-
-    # cv.setTrackbarPos('dilation', GAME_TITLE, 20)
-    # cv.setTrackbarPos('opening', GAME_TITLE, 0)
-
 
 
     calls = ["filepath,contour_thickness,white_noise_remover,area_threshold,growth,nb_of_contours,pass_or_fail"]
@@ -128,23 +122,8 @@ if __name__ == "__main__":
             white_noise_remover = cv.getTrackbarPos('white_noise_remover', GAME_TITLE)
             min_area_thresh = cv.getTrackbarPos('min growth', GAME_TITLE)
             max_area_thresh = cv.getTrackbarPos('max growth', GAME_TITLE)
-            # dilation = cv.getTrackbarPos('dilation', GAME_TITLE) - 20
-            # opening = cv.getTrackbarPos('opening', GAME_TITLE)
 
-            # max_avg_pixel_intensity = cv.getTrackbarPos('max avg pixel intensity', GAME_TITLE)
             blnk = cv.adaptiveThreshold(blnk, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, contour_thickness, white_noise_remover)
-
-            # if dilation > 0:
-            #     kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (dilation, dilation))
-            #     blnk = cv.dilate(blnk, kernel, 1)
-            # elif dilation < 0:
-            #     kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (-dilation, -dilation))
-            #     blnk = cv.erode(blnk, kernel, 1)
-            #
-            # if opening > 0:
-            #     kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (opening, opening))
-            #     blnk = cv.morphologyEx(blnk, cv.MORPH_OPEN, kernel)
-
             mask = np.zeros(well2.shape, np.uint8)
 
             contours = cv.findContours(blnk, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)[0]
