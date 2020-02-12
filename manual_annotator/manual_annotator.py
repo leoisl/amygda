@@ -66,7 +66,7 @@ if __name__ == "__main__":
     wells_paths = pd.read_csv(args.wells_csv)["wells"]
 
     cv.namedWindow(GAME_TITLE, cv.WINDOW_GUI_NORMAL)
-    maximize_window()
+    # maximize_window()
     cv.setMouseCallback(GAME_TITLE, mouse_callback)
 
     cv.createTrackbar('contour_thickness', GAME_TITLE, 3, 100, null_fn)
