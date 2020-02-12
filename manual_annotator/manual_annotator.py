@@ -167,7 +167,7 @@ if __name__ == "__main__":
             cv.imshow(GAME_TITLE, img_blnk)
 
 
-            key = cv.waitKey(1)
+            key = cv.waitKey(100)
             if key == 27:
                 save_rows(calls, args.output_csv)
                 exit()
