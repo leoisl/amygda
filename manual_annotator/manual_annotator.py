@@ -182,7 +182,7 @@ if __name__ == "__main__":
                 well_no += 1
                 break
             elif key == ord('p'):
-                calls = calls[:-1]
+                if well_no > 0: well_no -= 1
                 well_no -= 1
                 break
 
