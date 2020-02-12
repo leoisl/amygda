@@ -22,11 +22,8 @@ def get_color(color_index):
     return color_index, color
 
 
-def save_rows(calls, out_file):
-    with open(out_file, 'w') as out_fd:
-        for c in calls:
-            print(c, file=out_fd)
-    print(f"\nSaved progress to {out_file}")
+def save_rows(calls_csv, out_file):
+    calls_csv.to_csv(out_file)
 
 
 def null_fn(x):
@@ -83,9 +80,12 @@ if __name__ == "__main__":
     cv.setTrackbarPos('well shadow', GAME_TITLE, 14)
 
 
-    calls = ["filepath,contour_thickness,white_noise_remover,area_threshold,growth,nb_of_contours,pass_or_fail"]
+    calls_csv = pd.DataFrame(
+        columns=["contour_thickness","white_noise_remover","area_threshold","growth","nb_of_contours","pass_or_fail", "flags"])
+    calls_csv.index.name = "well_path"
     well_no = 0
     while well_no < len(wells_paths) and not window_is_closed():
+        print(calls_csv)
         well_path = wells_paths[well_no]
         well = cv.imread(well_path)
         flags = set([])
@@ -154,6 +154,7 @@ if __name__ == "__main__":
             key = cv.waitKey(100)
             if key == 27:
                 save_rows(calls, args.output_csv)
+                save_rows(calls_csv, args.output_csv)
                 exit()
             elif key == ord('b'):
                 if 'BUBBLE' in flags:
@@ -172,14 +173,12 @@ if __name__ == "__main__":
                     flags.add('DRY')
             elif key == ord('n'):
                 flags = ':'.join(flags)
-                call = f"{well_path},{contour_thickness},{white_noise_remover},{min_area_thresh},{total_area},{n_contours},PASS,{flags}"
-                calls.append(call)
+                calls_csv.loc[well_path] = [contour_thickness, white_noise_remover, min_area_thresh, total_area, n_contours, "PASS", flags]
                 well_no += 1
                 break
             elif key == ord('f'):
                 flags = ':'.join(flags)
-                call = f"{well_path},{contour_thickness},{white_noise_remover},{min_area_thresh},{total_area},{n_contours},FAIL,{flags}"
-                calls.append(call)
+                calls_csv.loc[well_path] = [contour_thickness, white_noise_remover, min_area_thresh, total_area, n_contours, "FAIL", flags]
                 well_no += 1
                 break
             elif key == ord('p'):
@@ -187,5 +186,5 @@ if __name__ == "__main__":
                 well_no -= 1
                 break
 
-    save_rows(calls, args.output_csv)
+    save_rows(calls_csv, args.output_csv)
     cv.destroyAllWindows()
