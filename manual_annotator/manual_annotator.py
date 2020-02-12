@@ -10,6 +10,19 @@ items = []
 hp = 0
 GAME_TITLE = 'Bug Lasso'
 
+colors=[(255,0,0), (0,255,0), (0,0,255),
+            (255,255,0), (255,0,255),
+            (0,255,255)]
+color_index = 0
+def get_color():
+    global colors, color_index
+    if color_index == len(colors):
+        color_index = 0
+    color = colors[color_index]
+    color_index+=1
+    return color
+
+
 def status(calls):
     os.system('clear')
     for line in calls:
@@ -148,7 +161,7 @@ if __name__ == "__main__":
                     #
                     # contour_has_good_pixel_intensity = contour_avg_pixel_intensity <= max_avg_pixel_intensity
                     # if contour_has_good_pixel_intensity:
-                    cv.drawContours(img_blnk, [cnt], -1, (0, 255, 0), 1)
+                    cv.drawContours(img_blnk, [cnt], -1, get_color(), 1)
                     total_area += area
                     n_contours += 1
 
