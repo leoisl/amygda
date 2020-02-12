@@ -60,20 +60,20 @@ if __name__ == "__main__":
 
     cv.namedWindow(GAME_TITLE, cv.WINDOW_GUI_NORMAL)
 
-    cv.createTrackbar('p1', GAME_TITLE, 3, 20, null_fn)
-    cv.createTrackbar('p2', GAME_TITLE, 3, 20, null_fn)
+    cv.createTrackbar('thickness', GAME_TITLE, 3, 100, null_fn)
+    cv.createTrackbar('white_noise', GAME_TITLE, 3, 50, null_fn)
     cv.createTrackbar('min growth', GAME_TITLE, 0, 500, null_fn)
     cv.createTrackbar('well shadow', GAME_TITLE, 10, 70, null_fn)
     cv.createTrackbar('max avg pixel intensity', GAME_TITLE, 0, 255, null_fn)
 
     # default positions
-    cv.setTrackbarPos('p1', GAME_TITLE, 17)
-    cv.setTrackbarPos('p2', GAME_TITLE, 6)
+    cv.setTrackbarPos('thickness', GAME_TITLE, 17)
+    cv.setTrackbarPos('white_noise', GAME_TITLE, 6)
     cv.setTrackbarPos('min growth', GAME_TITLE, 28)
     cv.setTrackbarPos('well shadow', GAME_TITLE, 14)
     cv.setTrackbarPos('max avg pixel intensity', GAME_TITLE, 120)
    
-    calls = ["filepath,p1,p2,area_threshold,growth,nb_of_contours,pass_or_fail"]
+    calls = ["filepath,thickness,white_noise,area_threshold,growth,nb_of_contours,pass_or_fail"]
     well_no = 0
     while well_no < len(wells_paths):
         well_path = wells_paths[well_no]
@@ -106,15 +106,15 @@ if __name__ == "__main__":
             blnk = well2.copy()
             img_blnk = img_border.copy()
             img_blnk_gray = cv.cvtColor(img_blnk, cv.COLOR_BGR2GRAY)
-            p1 = cv.getTrackbarPos('p1', GAME_TITLE)
-            if p1 % 2 != 1:
-                p1 += 1
-            if p1 < 3:
-                p1 = 3
-            p2 = cv.getTrackbarPos('p2', GAME_TITLE)
+            thickness = cv.getTrackbarPos('thickness', GAME_TITLE)
+            if thickness % 2 != 1:
+                thickness += 1
+            if thickness < 3:
+                thickness = 3
+            white_noise = cv.getTrackbarPos('white_noise', GAME_TITLE)
             area_thresh = cv.getTrackbarPos('min growth', GAME_TITLE)
             max_avg_pixel_intensity = cv.getTrackbarPos('max avg pixel intensity', GAME_TITLE)
-            blnk = cv.adaptiveThreshold(blnk, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, p1, p2)
+            blnk = cv.adaptiveThreshold(blnk, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, thickness, white_noise)
             mask = np.zeros(well2.shape, np.uint8)
 
             contours = cv.findContours(blnk, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
@@ -142,7 +142,7 @@ if __name__ == "__main__":
 
             key = cv.waitKey(1)
             if key == 27:
-                save_rows(calls)
+                save_rows(calls, args.output_csv)
                 exit()
             elif key == ord('b'):
                 if 'BUBBLE' in flags:
@@ -164,7 +164,7 @@ if __name__ == "__main__":
 
             elif key == ord('n'):
                 flags = ':'.join(flags)
-                call = f"{well_path},{p1},{p2},{area_thresh},{total_area},{n_contours},PASS,{flags}"
+                call = f"{well_path},{thickness},{white_noise},{area_thresh},{total_area},{n_contours},PASS,{flags}"
                 calls.append(call)
                 well_no += 1
                 hp += 1
@@ -172,7 +172,7 @@ if __name__ == "__main__":
                 break
             elif key == ord('f'):
                 flags = ':'.join(flags)
-                call = f"{well_path},{p1},{p2},{area_thresh},{total_area},{n_contours},FAIL,{flags}"
+                call = f"{well_path},{thickness},{white_noise},{area_thresh},{total_area},{n_contours},FAIL,{flags}"
                 calls.append(call)
                 well_no += 1
                 hp += 1
