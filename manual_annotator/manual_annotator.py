@@ -151,9 +151,9 @@ if __name__ == "__main__":
             cv.imshow(GAME_TITLE, img_blnk)
 
 
-            key = cv.waitKey(100)
-            if key == 27:
-                save_rows(calls, args.output_csv)
+
+            key = cv.waitKey(25)
+            if key == 27: # esc
                 save_rows(calls_csv, args.output_csv)
                 exit()
             elif key == ord('b'):
