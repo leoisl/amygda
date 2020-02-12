@@ -121,15 +121,14 @@ if __name__ == "__main__":
             total_area = 0
             n_contours = 0
             for cnt in contours[0]:
-                hull = cv.convexHull(cnt, False)
-                area = cv.contourArea(hull)
+                area = cv.contourArea(cnt)
                 contour_has_good_area = area > area_thresh and area < 500
                 if contour_has_good_area:
-                    contour_avg_pixel_intensity = get_avg_pixel_intensity_for_contour(img_blnk_gray, hull)
+                    contour_avg_pixel_intensity = get_avg_pixel_intensity_for_contour(img_blnk_gray, cnt)
 
                     contour_has_good_pixel_intensity = contour_avg_pixel_intensity <= max_avg_pixel_intensity
                     if contour_has_good_pixel_intensity:
-                        cv.drawContours(img_blnk, [hull], -1, (0, 255, 0), 1)
+                        cv.drawContours(img_blnk, [cnt], -1, (0, 255, 0), 1)
                         total_area += area
                         n_contours += 1
                        #break
