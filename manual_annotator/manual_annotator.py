@@ -58,6 +58,26 @@ def window_is_closed():
 def maximize_window():
     cv.setWindowProperty(GAME_TITLE, cv.WND_PROP_FULLSCREEN, 1.0)
 
+def show_images(img1, img2):
+    image_to_show = np.hstack((img1, img2))
+    cv.imshow(GAME_TITLE, image_to_show)
+
+
+def mask_circles(well_gray_with_border, p4):
+    circs = cv.HoughCircles(well_gray_with_border, cv.HOUGH_GRADIENT, 1, 1, param1=20, param2=p4, minRadius=37,
+                            maxRadius=42)
+    if circs is not None:
+        for cs in circs:
+            for c in cs:
+                x, y, r = c
+                r = int(r)
+                x = int(x)
+                y = int(y)
+                mask = np.zeros(well_gray_with_border.shape, np.uint8)
+                cv.circle(mask, (x, y), r, 255, thickness=-1)
+                well_gray_with_border = cv.bitwise_and(well_gray_with_border, well_gray_with_border, mask=mask)
+    return well_gray_with_border
+
 if __name__ == "__main__":
     args = get_args()
     wells_paths = pd.read_csv(args.wells_csv)["wells"]
@@ -92,28 +112,11 @@ if __name__ == "__main__":
         forbidden_contours = []
 
         while True and not window_is_closed():
+            # get input
             p4 = cv.getTrackbarPos('well shadow', GAME_TITLE)
             if p4 < 1:
                 p4=1
             b = 40
-            img_border = cv.copyMakeBorder(well, b, b, b, b, cv.BORDER_CONSTANT, 0)
-            well2 = cv.cvtColor(well, cv.COLOR_BGR2GRAY)
-            well2 = cv.copyMakeBorder(well2, b, b, b, b, cv.BORDER_CONSTANT, 0)
-            circs = cv.HoughCircles(well2, cv.HOUGH_GRADIENT, 1, 1, param1=20, param2=p4, minRadius=37, maxRadius=42)
-            if circs is not None:
-                for cs in circs:
-                    for c in cs:
-                        x, y, r = c
-                        r = int(r)
-                        x = int(x)
-                        y = int(y)
-                        mask = np.zeros(well2.shape, np.uint8)
-                        cv.circle(mask, (x, y), r, 255, thickness=-1)
-                        well2 = cv.bitwise_and(well2, well2, mask=mask)
-
-            blnk = well2.copy()
-            img_blnk = img_border.copy()
-            img_blnk_gray = cv.cvtColor(img_blnk, cv.COLOR_BGR2GRAY)
             contour_thickness = cv.getTrackbarPos('contour_thickness', GAME_TITLE)
             if contour_thickness % 2 != 1:
                 contour_thickness += 1
@@ -123,10 +126,20 @@ if __name__ == "__main__":
             min_area_thresh = cv.getTrackbarPos('min growth', GAME_TITLE)
             max_area_thresh = cv.getTrackbarPos('max growth', GAME_TITLE)
 
-            blnk = cv.adaptiveThreshold(blnk, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, contour_thickness, white_noise_remover)
-            mask = np.zeros(well2.shape, np.uint8)
 
-            contours = cv.findContours(blnk, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)[0]
+
+            well_gray_with_border = cv.cvtColor(well, cv.COLOR_BGR2GRAY)
+            well_gray_with_border = cv.copyMakeBorder(well_gray_with_border, b, b, b, b, cv.BORDER_CONSTANT, 0)
+            well_gray_with_border = mask_circles(well_gray_with_border, p4)
+            binarized_image = well_gray_with_border.copy()
+            binarized_image = cv.adaptiveThreshold(binarized_image, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, contour_thickness, white_noise_remover)
+
+            well_with_border = cv.copyMakeBorder(well, b, b, b, b, cv.BORDER_CONSTANT, 0)
+            binarized_image_with_color = cv.cvtColor(binarized_image, cv.COLOR_GRAY2BGR)
+
+
+            # find and draw contours
+            contours = cv.findContours(binarized_image, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)[0]
             total_area = 0
             n_contours = 0
             color_index = 0
@@ -137,19 +150,22 @@ if __name__ == "__main__":
                 contour_has_good_area = area >= min_area_thresh and area <= max_area_thresh
                 if contour_has_good_area and not is_a_forbidden_contours(cnt):
                     color_index, color = get_color(color_index)
-                    cv.drawContours(img_blnk, [cnt], -1, color, 1)
+                    cv.drawContours(well_with_border, [cnt], -1, color, 1)
+                    cv.drawContours(binarized_image_with_color, [cnt], -1, color, 1)
                     total_area += area
                     n_contours += 1
                     good_contours.append(cnt)
 
+
+            # write info to well_with_border
             font = cv.FONT_HERSHEY_SIMPLEX
-            img_blnk = cv.putText(img_blnk, f"Growth: {total_area}", (0, img_blnk.shape[1] - 5), font, 0.7, (0, 255, 0), 1)  # , cv.LINE_AA)
-            img_blnk = cv.putText(img_blnk, ','.join(flags), (0, 12), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
+            well_with_border = cv.putText(well_with_border, f"Growth: {total_area}", (0, well_with_border.shape[1] - 5), font, 0.7, (0, 255, 0), 1)  # , cv.LINE_AA)
+            well_with_border = cv.putText(well_with_border, ','.join(flags), (0, 12), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
             if len(forbidden_contours):
-                img_blnk = cv.putText(img_blnk, f"{len(forbidden_contours)} REMOVED", (0, 28), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
+                img_blnk = cv.putText(well_with_border, f"{len(forbidden_contours)} REMOVED", (0, 28), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
 
-            cv.imshow(GAME_TITLE, img_blnk)
 
+            show_images(well_with_border, binarized_image_with_color)
 
 
             key = cv.waitKey(25)
@@ -183,8 +199,8 @@ if __name__ == "__main__":
                 break
             elif key == ord('p'):
                 if well_no > 0: well_no -= 1
-                well_no -= 1
                 break
+
 
     save_rows(calls_csv, args.output_csv)
     cv.destroyAllWindows()
