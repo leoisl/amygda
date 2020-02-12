@@ -56,20 +56,6 @@ def get_args():
     return args
 
 
-def get_avg_pixel_intensity_for_contour(image, contour):
-    intensities = []
-    x_rect, y_rect, w_rect, h_rect = cv.boundingRect(contour)
-
-    for x in range(int(x_rect), int(x_rect+w_rect+1)):
-        for y in range(int(y_rect), int(y_rect+h_rect+1)):
-            point_in_contour = cv.pointPolygonTest(contour, (x,y), False) == 1.0
-            if point_in_contour:
-                intensities.append(image[y][x])
-
-    if len(intensities) == 0:
-        return 255
-    else:
-        return np.mean(intensities)
 
 if __name__ == "__main__":
     args = get_args()
