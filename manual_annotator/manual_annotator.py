@@ -64,7 +64,7 @@ if __name__ == "__main__":
     cv.createTrackbar('white_noise', GAME_TITLE, 3, 50, null_fn)
     cv.createTrackbar('min growth', GAME_TITLE, 0, 500, null_fn)
     cv.createTrackbar('dilation', GAME_TITLE, 0, 40, null_fn)
-    cv.createTrackbar('closing', GAME_TITLE, 0, 20, null_fn)
+    cv.createTrackbar('opening', GAME_TITLE, 0, 20, null_fn)
     # cv.createTrackbar('well shadow', GAME_TITLE, 10, 70, null_fn)
     # cv.createTrackbar('max avg pixel intensity', GAME_TITLE, 0, 255, null_fn)
 
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     # cv.setTrackbarPos('well shadow', GAME_TITLE, 14)
     # cv.setTrackbarPos('max avg pixel intensity', GAME_TITLE, 120)
     cv.setTrackbarPos('dilation', GAME_TITLE, 20)
-    cv.setTrackbarPos('closing', GAME_TITLE, 0)
+    cv.setTrackbarPos('opening', GAME_TITLE, 0)
 
 
     calls = ["filepath,thickness,white_noise,area_threshold,growth,nb_of_contours,pass_or_fail"]
@@ -119,7 +119,7 @@ if __name__ == "__main__":
             white_noise = cv.getTrackbarPos('white_noise', GAME_TITLE)
             area_thresh = cv.getTrackbarPos('min growth', GAME_TITLE)
             dilation = cv.getTrackbarPos('dilation', GAME_TITLE) - 20
-            closing = cv.getTrackbarPos('closing', GAME_TITLE)
+            opening = cv.getTrackbarPos('opening', GAME_TITLE)
 
             # max_avg_pixel_intensity = cv.getTrackbarPos('max avg pixel intensity', GAME_TITLE)
             blnk = cv.adaptiveThreshold(blnk, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, thickness, white_noise)
@@ -131,9 +131,9 @@ if __name__ == "__main__":
                 kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (-dilation, -dilation))
                 blnk = cv.erode(blnk, kernel, 1)
 
-            if closing > 0:
-                kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (closing, closing))
-                blnk = cv.morphologyEx(blnk, cv.MORPH_CLOSE, kernel)
+            if opening > 0:
+                kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, (opening, opening))
+                blnk = cv.morphologyEx(blnk, cv.MORPH_OPEN, kernel)
 
             mask = np.zeros(well2.shape, np.uint8)
 
