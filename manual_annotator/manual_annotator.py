@@ -58,9 +58,8 @@ def window_is_closed():
 def maximize_window():
     cv.setWindowProperty(GAME_TITLE, cv.WND_PROP_FULLSCREEN, 1.0)
 
-def show_images(human_vision, computer_vision, hotkey_image):
+def show_images(human_vision, computer_vision):
     image_to_show = np.hstack((human_vision, computer_vision))
-    image_to_show = np.vstack((image_to_show, hotkey_image))
     cv.imshow(GAME_TITLE, image_to_show)
 
 
@@ -160,19 +159,19 @@ if __name__ == "__main__":
 
             # write info to images
             font = cv.FONT_HERSHEY_SIMPLEX
-            well_with_border = cv.putText(well_with_border, f"Growth: {total_area}", (0, well_with_border.shape[1] - 5), font, 0.7, (0, 255, 0), 1)  # , cv.LINE_AA)
-            well_with_border = cv.putText(well_with_border, ','.join(flags), (0, 12), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
+            cv.putText(well_with_border, f"Growth: {total_area}", (0, well_with_border.shape[1] - 5), font, 0.7, (0, 255, 0), 1)  # , cv.LINE_AA)
+            cv.putText(well_with_border, ','.join(flags), (0, 12), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
             if len(forbidden_contours):
-                img_blnk = cv.putText(well_with_border, f"{len(forbidden_contours)} REMOVED", (0, 28), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
+                cv.putText(well_with_border, f"{len(forbidden_contours)} REMOVED", (0, 28), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
 
-            hotkeys_image = np.full(shape=(70, well_with_border.shape[1]+binarized_image_with_color.shape[1]),
-                                    fill_value=np.uint8(255))
-            hotkeys_image = cv.cvtColor(hotkeys_image, cv.COLOR_GRAY2BGR)
-            hotkeys_image = cv.putText(hotkeys_image, "[Enter]=Confirm; [F]=Fail; [P]=Previous;", (1, 20), font, 0.5, (0, 0, 0), 1)
-            hotkeys_image = cv.putText(hotkeys_image, "[B]=Bubble; [C]=Cond; [D]=Dry well;", (1, 40), font, 0.5, (0, 0, 0), 1)
-            hotkeys_image = cv.putText(hotkeys_image, "[ESC]=Save and quit;", (1, 60), font, 0.5, (0, 0, 0), 1)
+            # hotkeys_image = np.full(shape=(70, well_with_border.shape[1]+binarized_image_with_color.shape[1]),
+            #                         fill_value=np.uint8(255))
+            # hotkeys_image = cv.cvtColor(hotkeys_image, cv.COLOR_GRAY2BGR)
+            # hotkeys_image = cv.putText(hotkeys_image, "[Enter]=Confirm; [F]=Fail; [P]=Previous;", (1, 20), font, 0.5, (0, 0, 0), 1)
+            # hotkeys_image = cv.putText(hotkeys_image, "[B]=Bubble; [C]=Cond; [D]=Dry well;", (1, 40), font, 0.5, (0, 0, 0), 1)
+            # hotkeys_image = cv.putText(hotkeys_image, "[ESC]=Save and quit;", (1, 60), font, 0.5, (0, 0, 0), 1)
 
-            show_images(well_with_border, binarized_image_with_color, hotkeys_image)
+            show_images(well_with_border, binarized_image_with_color)
 
 
             key = cv.waitKey(25)
