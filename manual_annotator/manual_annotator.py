@@ -9,6 +9,7 @@ colors=[(255,0,0), (0,255,0), (0,0,255),
             (255,255,0), (255,0,255),
             (0,255,255)]
 
+# TODO: save csv at each 10 images (jeff commit)
 # TODO: control multithreaded access?
 good_contours=[]
 forbidden_contours=[]
@@ -152,24 +153,17 @@ if __name__ == "__main__":
                     color_index, color = get_color(color_index)
                     cv.drawContours(well_with_border, [cnt], -1, color, 1)
                     cv.drawContours(binarized_image_with_color, [cnt], -1, color, 1)
-                    total_area += area
+                    total_area += area # TODO normalize this?
                     n_contours += 1
                     good_contours.append(cnt)
 
 
             # write info to images
             font = cv.FONT_HERSHEY_SIMPLEX
-            cv.putText(well_with_border, f"Growth: {total_area}", (0, well_with_border.shape[1] - 5), font, 0.7, (0, 255, 0), 1)  # , cv.LINE_AA)
+            cv.putText(well_with_border, f"Growth: {int(total_area)}", (0, well_with_border.shape[1] - 5), font, 0.7, (0, 255, 0), 1)  # , cv.LINE_AA)
             cv.putText(well_with_border, ','.join(flags), (0, 12), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
             if len(forbidden_contours):
                 cv.putText(well_with_border, f"{len(forbidden_contours)} REMOVED", (0, 28), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
-
-            # hotkeys_image = np.full(shape=(70, well_with_border.shape[1]+binarized_image_with_color.shape[1]),
-            #                         fill_value=np.uint8(255))
-            # hotkeys_image = cv.cvtColor(hotkeys_image, cv.COLOR_GRAY2BGR)
-            # hotkeys_image = cv.putText(hotkeys_image, "[Enter]=Confirm; [F]=Fail; [P]=Previous;", (1, 20), font, 0.5, (0, 0, 0), 1)
-            # hotkeys_image = cv.putText(hotkeys_image, "[B]=Bubble; [C]=Cond; [D]=Dry well;", (1, 40), font, 0.5, (0, 0, 0), 1)
-            # hotkeys_image = cv.putText(hotkeys_image, "[ESC]=Save and quit;", (1, 60), font, 0.5, (0, 0, 0), 1)
 
             show_images(well_with_border, binarized_image_with_color)
 
