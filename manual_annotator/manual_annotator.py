@@ -202,7 +202,7 @@ if __name__ == "__main__":
             if len(forbidden_contours):
                 cv.putText(well_with_border, f"{len(forbidden_contours)} REMOVED", (0, 28), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
 
-            show_images(static_well_with_border, well_with_border, binarized_image_with_color)
+            show_images(well_with_border, static_well_with_border, binarized_image_with_color)
 
 
             key = cv.waitKey(25)
