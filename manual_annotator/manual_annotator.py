@@ -241,6 +241,9 @@ if __name__ == "__main__":
             elif key == ord('s') or key == ord('S'):
                 save_rows(calls_csv, args.output_csv)
 
-    print("All done, thanks!")
     save_rows(calls_csv, args.output_csv)
     cv.destroyAllWindows()
+
+    if len(wells_paths) == len(calls_csv):
+        print("All done, thanks!")
+
