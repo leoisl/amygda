@@ -9,7 +9,7 @@ fi
 # configs
 amygda_home="$HOME/amygda/"
 dataset_folder="/media/penelopeprime/bacterial_growth_imaging"
-virtualenv_activate_script="$HOME/training/.local/share/virtualenvs/amygda-CYtbES-g/bin/activate"
+virtualenv_activate_script="$HOME/.local/share/virtualenvs/amygda-CYtbES-g/bin/activate"
 user=$1
 wells_or_extra=$2
 output_folder="${dataset_folder}/outputs/${user}/"
