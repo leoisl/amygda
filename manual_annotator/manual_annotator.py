@@ -120,7 +120,7 @@ if __name__ == "__main__":
     calls_csv.index.name = "well_path"
     well_no = 0
     while well_no < len(wells_paths) and not window_is_closed():
-        cv.displayOverlay(GAME_TITLE, f"Well {well_no+1}/{len(wells_paths)}", 1000)
+        cv.displayOverlay(GAME_TITLE, f"Well {well_no+1}", 1000)
         well_path = wells_paths[well_no]
         well = cv.imread(well_path)
         flags = set([])
