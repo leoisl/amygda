@@ -5,6 +5,20 @@ import argparse
 
 GAME_TITLE = 'Bug Lasso'
 
+hotkeys_text = """
+Hotkeys:
+[ENTER] = Confirm and go next (I found the correct answer);
+[F] = Fail and go next (I could not find the correct answer);
+[P] = Go back (previous)
+[B] = Flag bubbles
+[C] = Flag condensations
+[D] = Flag dry well
+[LEFT MOUSE CLICK] = Remove contour from growth;
+[RIGHT MOUSE CLICK] = Clean removed contours;
+[H] = Show help
+[ESC] = Save and exit
+"""
+
 colors=[(255,0,0), (0,255,0), (0,0,255),
             (255,255,0), (255,0,255),
             (0,255,255)]
@@ -200,6 +214,8 @@ if __name__ == "__main__":
             elif key == ord('p') or key == ord('P'):
                 if well_no > 0: well_no -= 1
                 break
+            elif key == ord('h') or key == ord('H'):
+                cv.displayOverlay(GAME_TITLE, hotkeys_text, 3000)
 
 
     save_rows(calls_csv, args.output_csv)
