@@ -7,15 +7,15 @@ GAME_TITLE = 'Bug Lasso'
 
 hotkeys_text = """
 Hotkeys:
-[ENTER] or [N] = Confirm and go next (I found the correct answer);
-[F] = Fail and go next (I could not find the correct answer);
+[ENTER] or [N] = Confirm and next ("I found the correct answer")
+[F] = Fail and next ("I could not find the correct answer")
 [P] = Go back (previous)
 [B] = Flag bubbles
-[C] = Flag condensations
-[D] = Flag dry well
-[LEFT MOUSE CLICK] = Remove contour from growth;
-[RIGHT MOUSE CLICK] = Clean removed contours;
-[H] = Show help
+[C] = Flag condensation
+[D] = Flag a dry well
+[LEFT MOUSE CLICK] = Remove a contour
+[RIGHT MOUSE CLICK] = Replace a removed contour
+[H] = Show hotkey menu
 [ESC] = Save and exit
 """
 
@@ -61,9 +61,9 @@ def is_a_forbidden_contours(cnt):
 
 
 def get_args():
-    parser = argparse.ArgumentParser(description='Manual annotator on a list of well images.')
-    parser.add_argument('--wells_csv', type=str, help='CSV with the wells, output by create_participants_dataset.py script', required=True)
-    parser.add_argument('--output_csv', type=str, help='Output CSV', required=True)
+    parser = argparse.ArgumentParser(description='Manual annotator for a list of well images.')
+    parser.add_argument('--wells_csv', type=str, help='CSV file with a list of wells. This file is the output of create_participants_dataset.py script', required=True)
+    parser.add_argument('--output_csv', type=str, help='The output CSV file', required=True)
     args = parser.parse_args()
     return args
 
@@ -73,8 +73,8 @@ def window_is_closed():
 def maximize_window():
     cv.setWindowProperty(GAME_TITLE, cv.WND_PROP_FULLSCREEN, 1.0)
 
-def show_images(human_vision, computer_vision):
-    image_to_show = np.hstack((human_vision, computer_vision))
+def show_images(human_vision, static_image):
+    image_to_show = np.hstack((human_vision, static_image))
     cv.imshow(GAME_TITLE, image_to_show)
 
 
@@ -101,22 +101,22 @@ if __name__ == "__main__":
     # maximize_window()
     cv.setMouseCallback(GAME_TITLE, mouse_callback)
 
-    cv.createTrackbar('contour_thickness', GAME_TITLE, 3, 100, null_fn)
-    cv.createTrackbar('white_noise_remover', GAME_TITLE, 3, 50, null_fn)
-    cv.createTrackbar('min growth', GAME_TITLE, 0, 500, null_fn)
-    cv.createTrackbar('max growth', GAME_TITLE, 0, 5000, null_fn)
-    cv.createTrackbar('well shadow', GAME_TITLE, 10, 70, null_fn)
+    cv.createTrackbar('Contour thickness', GAME_TITLE, 3, 100, null_fn)
+    cv.createTrackbar('White noise', GAME_TITLE, 3, 50, null_fn)
+    cv.createTrackbar('Min growth', GAME_TITLE, 0, 500, null_fn)
+    cv.createTrackbar('Max growth', GAME_TITLE, 0, 5000, null_fn)
+    cv.createTrackbar('Well shadow', GAME_TITLE, 10, 70, null_fn)
 
     # default positions
-    cv.setTrackbarPos('contour_thickness', GAME_TITLE, 17)
-    cv.setTrackbarPos('white_noise_remover', GAME_TITLE, 6)
-    cv.setTrackbarPos('min growth', GAME_TITLE, 28)
-    cv.setTrackbarPos('max growth', GAME_TITLE, 1000)
-    cv.setTrackbarPos('well shadow', GAME_TITLE, 14)
+    cv.setTrackbarPos('Contour thickness', GAME_TITLE, 17)
+    cv.setTrackbarPos('White noise', GAME_TITLE, 6)
+    cv.setTrackbarPos('Min growth', GAME_TITLE, 28)
+    cv.setTrackbarPos('Max growth', GAME_TITLE, 1000)
+    cv.setTrackbarPos('Well shadow', GAME_TITLE, 14)
 
 
     calls_csv = pd.DataFrame(
-        columns=["contour_thickness","white_noise_remover","area_threshold","growth","nb_of_contours","pass_or_fail", "flags"])
+        columns=["contour_thickness","white_noise","area_threshold","growth","nb_of_contours","pass_or_fail", "flags"])
     calls_csv.index.name = "well_path"
     well_no = 0
     while well_no < len(wells_paths) and not window_is_closed():
@@ -128,18 +128,18 @@ if __name__ == "__main__":
 
         while True and not window_is_closed():
             # get input
-            p4 = cv.getTrackbarPos('well shadow', GAME_TITLE)
+            p4 = cv.getTrackbarPos('Well shadow', GAME_TITLE)
             if p4 < 1:
                 p4=1
             b = 40
-            contour_thickness = cv.getTrackbarPos('contour_thickness', GAME_TITLE)
+            contour_thickness = cv.getTrackbarPos('Contour thickness', GAME_TITLE)
             if contour_thickness % 2 != 1:
                 contour_thickness += 1
             if contour_thickness < 3:
                 contour_thickness = 3
-            white_noise_remover = cv.getTrackbarPos('white_noise_remover', GAME_TITLE)
-            min_area_thresh = cv.getTrackbarPos('min growth', GAME_TITLE)
-            max_area_thresh = cv.getTrackbarPos('max growth', GAME_TITLE)
+            white_noise = cv.getTrackbarPos('White noise', GAME_TITLE)
+            min_area_thresh = cv.getTrackbarPos('Min growth', GAME_TITLE)
+            max_area_thresh = cv.getTrackbarPos('Max growth', GAME_TITLE)
 
 
 
@@ -147,9 +147,12 @@ if __name__ == "__main__":
             well_gray_with_border = cv.copyMakeBorder(well_gray_with_border, b, b, b, b, cv.BORDER_CONSTANT, 0)
             well_gray_with_border = mask_circles(well_gray_with_border, p4)
             binarized_image = well_gray_with_border.copy()
-            binarized_image = cv.adaptiveThreshold(binarized_image, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, contour_thickness, white_noise_remover)
+            binarized_image = cv.adaptiveThreshold(binarized_image, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, contour_thickness, white_noise)
+            static_well_image = well.copy()
+
 
             well_with_border = cv.copyMakeBorder(well, b, b, b, b, cv.BORDER_CONSTANT, 0)
+            static_well_with_border = cv.copyMakeBorder(well, b, b, b, b, cv.BORDER_CONSTANT, 0)
             binarized_image_with_color = cv.cvtColor(binarized_image, cv.COLOR_GRAY2BGR)
 
 
@@ -166,7 +169,6 @@ if __name__ == "__main__":
                 if contour_has_good_area and not is_a_forbidden_contours(cnt):
                     color_index, color = get_color(color_index)
                     cv.drawContours(well_with_border, [cnt], -1, color, 1)
-                    cv.drawContours(binarized_image_with_color, [cnt], -1, color, 1)
                     total_area += area # TODO normalize this?
                     n_contours += 1
                     good_contours.append(cnt)
@@ -179,7 +181,7 @@ if __name__ == "__main__":
             if len(forbidden_contours):
                 cv.putText(well_with_border, f"{len(forbidden_contours)} REMOVED", (0, 28), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
 
-            show_images(well_with_border, binarized_image_with_color)
+            show_images(well_with_border, static_well_with_border)
 
 
             key = cv.waitKey(25)
@@ -203,12 +205,12 @@ if __name__ == "__main__":
                     flags.add('DRY')
             elif key == 13 or key == ord('n') or key == ord('N'): # enter
                 flags = ':'.join(flags)
-                calls_csv.loc[well_path] = [contour_thickness, white_noise_remover, min_area_thresh, total_area, n_contours, "PASS", flags]
+                calls_csv.loc[well_path] = [contour_thickness, white_noise, min_area_thresh, total_area, n_contours, "PASS", flags]
                 well_no += 1
                 break
             elif key == ord('f') or key == ord('F'):
                 flags = ':'.join(flags)
-                calls_csv.loc[well_path] = [contour_thickness, white_noise_remover, min_area_thresh, total_area, n_contours, "FAIL", flags]
+                calls_csv.loc[well_path] = [contour_thickness, white_noise, min_area_thresh, total_area, n_contours, "FAIL", flags]
                 well_no += 1
                 break
             elif key == ord('p') or key == ord('P'):
