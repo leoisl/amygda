@@ -75,8 +75,8 @@ def window_is_closed():
 def maximize_window():
     cv.setWindowProperty(GAME_TITLE, cv.WND_PROP_FULLSCREEN, 1.0)
 
-def show_images(human_vision, static_image):
-    image_to_show = np.hstack((human_vision, static_image))
+def show_images(*images):
+    image_to_show = np.hstack(images)
     cv.imshow(GAME_TITLE, image_to_show)
 
 
@@ -189,6 +189,7 @@ if __name__ == "__main__":
                 if contour_has_good_area and not is_a_forbidden_contours(cnt):
                     color_index, color = get_color(color_index)
                     cv.drawContours(well_with_border, [cnt], -1, color, 1)
+                    cv.drawContours(binarized_image_with_color, [cnt], -1, color, 1)
                     total_area += area # TODO normalize this?
                     n_contours += 1
                     good_contours.append(cnt)
@@ -201,7 +202,7 @@ if __name__ == "__main__":
             if len(forbidden_contours):
                 cv.putText(well_with_border, f"{len(forbidden_contours)} REMOVED", (0, 28), font, 0.5, (0, 0, 255), 1)  # , cv.LINE_AA)
 
-            show_images(well_with_border, static_well_with_border)
+            show_images(static_well_with_border, well_with_border, binarized_image_with_color)
 
 
             key = cv.waitKey(25)
