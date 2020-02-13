@@ -24,7 +24,6 @@ colors=[(255,0,0), (0,255,0), (0,0,255),
             (255,255,0), (255,0,255),
             (0,255,255)]
 
-# TODO: save csv at each 10 images (jeff commit)
 # TODO: control multithreaded access?
 good_contours=[]
 forbidden_contours=[]
@@ -81,8 +80,8 @@ def show_images(human_vision, static_image):
     cv.imshow(GAME_TITLE, image_to_show)
 
 
-def mask_circles(well_gray_with_border, p4):
-    circs = cv.HoughCircles(well_gray_with_border, cv.HOUGH_GRADIENT, 1, 1, param1=20, param2=p4, minRadius=37,
+def mask_circles(well_gray_with_border, well_shadow):
+    circs = cv.HoughCircles(well_gray_with_border, cv.HOUGH_GRADIENT, 1, 1, param1=20, param2=well_shadow, minRadius=37,
                             maxRadius=42)
     if circs is not None:
         for cs in circs:
@@ -103,7 +102,8 @@ def load_dataframe(output_csv_filepath):
         return pd.read_csv(output_csv_path, index_col="well_path")
     else:
         calls_csv = pd.DataFrame(
-            columns=["contour_thickness","white_noise","area_threshold","growth","nb_of_contours","pass_or_fail", "flags"])
+            columns=["contour_thickness","white_noise","min_area_threshold","max_area_threshold",
+                     "well_shadow","growth","nb_of_contours","pass_or_fail", "flags"])
         calls_csv.index.name = "well_path"
         return calls_csv
 
@@ -148,9 +148,9 @@ if __name__ == "__main__":
 
         while True and not window_is_closed():
             # get input
-            p4 = cv.getTrackbarPos('Well shadow', GAME_TITLE)
-            if p4 < 1:
-                p4=1
+            well_shadow = cv.getTrackbarPos('Well shadow', GAME_TITLE)
+            if well_shadow < 1:
+                well_shadow=1
             b = 40
             contour_thickness = cv.getTrackbarPos('Contour thickness', GAME_TITLE)
             if contour_thickness % 2 != 1:
@@ -165,7 +165,7 @@ if __name__ == "__main__":
 
             well_gray_with_border = cv.cvtColor(well, cv.COLOR_BGR2GRAY)
             well_gray_with_border = cv.copyMakeBorder(well_gray_with_border, b, b, b, b, cv.BORDER_CONSTANT, 0)
-            well_gray_with_border = mask_circles(well_gray_with_border, p4)
+            well_gray_with_border = mask_circles(well_gray_with_border, well_shadow)
             binarized_image = well_gray_with_border.copy()
             binarized_image = cv.adaptiveThreshold(binarized_image, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, contour_thickness, white_noise)
             static_well_image = well.copy()
@@ -225,12 +225,12 @@ if __name__ == "__main__":
                     flags.add('DRY')
             elif key == 13 or key == ord('n') or key == ord('N'): # enter
                 flags = ':'.join(flags)
-                calls_csv.loc[well_path] = [contour_thickness, white_noise, min_area_thresh, total_area, n_contours, "PASS", flags]
+                calls_csv.loc[well_path] = [contour_thickness, white_noise, min_area_thresh, max_area_thresh, well_shadow, total_area, n_contours, "PASS", flags]
                 well_no += 1
                 break
             elif key == ord('f') or key == ord('F'):
                 flags = ':'.join(flags)
-                calls_csv.loc[well_path] = [contour_thickness, white_noise, min_area_thresh, total_area, n_contours, "FAIL", flags]
+                calls_csv.loc[well_path] = [contour_thickness, white_noise, min_area_thresh, max_area_thresh, well_shadow, total_area, n_contours, "FAIL", flags]
                 well_no += 1
                 break
             elif key == ord('p') or key == ord('P'):
