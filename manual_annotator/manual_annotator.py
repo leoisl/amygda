@@ -121,8 +121,15 @@ if __name__ == "__main__":
         columns=["contour_thickness","white_noise","area_threshold","growth","nb_of_contours","pass_or_fail", "flags"])
     calls_csv.index.name = "well_path"
     well_no = 0
+    iterations = 0
     while well_no < len(wells_paths) and not window_is_closed():
-        cv.displayOverlay(GAME_TITLE, f"Well {well_no+1}", 1000)
+        iterations+=1
+
+        save_automatically = iterations % 5 == 0
+        if save_automatically:
+            save_rows(calls_csv, args.output_csv)
+        else:
+            cv.displayOverlay(GAME_TITLE, f"Well {well_no+1}", 1000)
         well_path = wells_paths[well_no]
         well = cv.imread(well_path)
         flags = set([])
