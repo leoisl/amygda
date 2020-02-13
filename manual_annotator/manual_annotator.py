@@ -2,6 +2,7 @@ import numpy as np
 import cv2 as cv
 import pandas as pd
 import argparse
+from pathlib import Path
 
 GAME_TITLE = 'Bug Lasso'
 
@@ -95,6 +96,19 @@ def mask_circles(well_gray_with_border, p4):
                 well_gray_with_border = cv.bitwise_and(well_gray_with_border, well_gray_with_border, mask=mask)
     return well_gray_with_border
 
+
+def load_dataframe(output_csv_filepath):
+    output_csv_path = Path(output_csv_filepath)
+    if output_csv_path.exists():
+        return pd.read_csv(output_csv_path, index_col="well_path")
+    else:
+        calls_csv = pd.DataFrame(
+            columns=["contour_thickness","white_noise","area_threshold","growth","nb_of_contours","pass_or_fail", "flags"])
+        calls_csv.index.name = "well_path"
+        return calls_csv
+
+
+
 if __name__ == "__main__":
     args = get_args()
     wells_paths = pd.read_csv(args.wells_csv)["wells"]
@@ -116,11 +130,8 @@ if __name__ == "__main__":
     cv.setTrackbarPos('Max growth', GAME_TITLE, 1000)
     cv.setTrackbarPos('Well shadow', GAME_TITLE, 14)
 
-
-    calls_csv = pd.DataFrame(
-        columns=["contour_thickness","white_noise","area_threshold","growth","nb_of_contours","pass_or_fail", "flags"])
-    calls_csv.index.name = "well_path"
-    well_no = 0
+    calls_csv = load_dataframe(args.output_csv)
+    well_no = len(calls_csv)
     iterations = 0
     while well_no < len(wells_paths) and not window_is_closed():
         iterations+=1
@@ -230,6 +241,6 @@ if __name__ == "__main__":
             elif key == ord('s') or key == ord('S'):
                 save_rows(calls_csv, args.output_csv)
 
-
+    print("All done, thanks!")
     save_rows(calls_csv, args.output_csv)
     cv.destroyAllWindows()
