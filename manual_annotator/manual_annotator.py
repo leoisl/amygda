@@ -189,7 +189,7 @@ if __name__ == "__main__":
                 if contour_has_good_area and not is_a_forbidden_contours(cnt):
                     color_index, color = get_color(color_index)
                     cv.drawContours(well_with_border, [cnt], -1, color, 1)
-                    total_area += area # TODO normalize this?
+                    total_area += area
                     n_contours += 1
                     good_contours.append(cnt)
 
