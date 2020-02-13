@@ -38,7 +38,9 @@ def get_color(color_index):
 
 
 def save_rows(calls_csv, out_file):
+    cv.displayOverlay(GAME_TITLE, f"Saving calls to {out_file}...", 1000)
     calls_csv.to_csv(out_file)
+    cv.displayOverlay(GAME_TITLE, f"Calls successfully saved to {out_file}!", 1000)
 
 
 def null_fn(x):
@@ -218,6 +220,8 @@ if __name__ == "__main__":
                 break
             elif key == ord('h') or key == ord('H'):
                 cv.displayOverlay(GAME_TITLE, hotkeys_text, 3000)
+            elif key == ord('s') or key == ord('S'):
+                save_rows(calls_csv, args.output_csv)
 
 
     save_rows(calls_csv, args.output_csv)
