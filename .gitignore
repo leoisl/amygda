@@ -129,3 +129,5 @@ create_participants_dataset/data/
 bin/data/
 
 create_participants_dataset/data_filtered/
+
+participants_dataset
