@@ -7,7 +7,7 @@ GAME_TITLE = 'Bug Lasso'
 
 hotkeys_text = """
 Hotkeys:
-[ENTER] = Confirm and go next (I found the correct answer);
+[ENTER] or [N] = Confirm and go next (I found the correct answer);
 [F] = Fail and go next (I could not find the correct answer);
 [P] = Go back (previous)
 [B] = Flag bubbles
@@ -201,7 +201,7 @@ if __name__ == "__main__":
                     flags.remove('DRY')
                 else:
                     flags.add('DRY')
-            elif key == 13: # enter
+            elif key == 13 or key == ord('n') or key == ord('N'): # enter
                 flags = ':'.join(flags)
                 calls_csv.loc[well_path] = [contour_thickness, white_noise_remover, min_area_thresh, total_area, n_contours, "PASS", flags]
                 well_no += 1
