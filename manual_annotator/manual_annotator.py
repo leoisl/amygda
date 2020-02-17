@@ -119,9 +119,10 @@ if __name__ == "__main__":
 
     cv.createTrackbar('Contour thickness', GAME_TITLE, 3, 100, null_fn)
     cv.createTrackbar('White noise', GAME_TITLE, 3, 50, null_fn)
+    cv.createTrackbar('Well shadow', GAME_TITLE, 10, 70, null_fn)
     cv.createTrackbar('Min growth', GAME_TITLE, 0, 500, null_fn)
     cv.createTrackbar('Max growth', GAME_TITLE, 0, 5000, null_fn)
-    cv.createTrackbar('Well shadow', GAME_TITLE, 10, 70, null_fn)
+
 
     # default positions
     cv.setTrackbarPos('Contour thickness', GAME_TITLE, 17)
@@ -237,7 +238,7 @@ if __name__ == "__main__":
                 if well_no > 0: well_no -= 1
                 break
             elif key == ord('h') or key == ord('H'):
-                cv.displayOverlay(GAME_TITLE, hotkeys_text, 3000)
+                cv.displayOverlay(GAME_TITLE, hotkeys_text.upper(), 10000)
             elif key == ord('s') or key == ord('S'):
                 save_rows(calls_csv, args.output_csv)
 
