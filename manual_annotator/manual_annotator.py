@@ -15,7 +15,7 @@ Hotkeys:
 [C] = Flag condensation
 [D] = Flag a dry well
 [LEFT MOUSE CLICK] = Remove a contour
-[RIGHT MOUSE CLICK] = Replace a removed contour
+[RIGHT MOUSE CLICK] = Clear all removed contours
 [H] = Show hotkey menu
 [ESC] = Save and exit
 """
