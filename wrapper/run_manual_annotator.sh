@@ -29,7 +29,7 @@ dataset_type=$2
 output_folder="${dataset_folder}/outputs/${user}/"
 participants_datasets_folder="${dataset_folder}/participants_datasets"
 scientist_folder="${participants_datasets_folder}/${user}"
-all_participants=`ls "$scientist_folder" | tr '\n' ' '`
+all_participants=$(ls "$participants_datasets_folder" | tr '\n' ' ')
 
 if [[ ! -d "$scientist_folder" ]]
 then
