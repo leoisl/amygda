@@ -131,3 +131,4 @@ bin/data/
 create_participants_dataset/data_filtered/
 
 participants_dataset
+manual_annotator/participants_datasets/
