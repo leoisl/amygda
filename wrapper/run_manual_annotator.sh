@@ -41,6 +41,8 @@ fi
 dataset_types=(wells extra training)
 array_contains dataset_types "$dataset_type" && echo "Running ${dataset_type} for ${user}" || (echo "The dataset type (second argument) must be \"wells\", \"extra\" or \"training\"" && exit 1)
 
+exit 0
+
 source "$virtualenv_activate_script"
 cd "$dataset_folder" || exit
 mkdir -p "$output_folder"
