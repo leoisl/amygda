@@ -15,7 +15,7 @@ array_contains () {
 
 
 if [ "$#" -ne 2 ]; then
-    echo "Usage: $0 <user_id> <wells or extra>"
+    echo "Usage: $0 <user_id> <training or wells or extra>"
     echo "Example: $0 Curie wells"
     exit 1
 fi
