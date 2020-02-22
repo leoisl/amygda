@@ -17,6 +17,7 @@ def load_images(df_pass_shuffled):
     images = []
     for well_path in df_pass_shuffled["well_path"]:
         image = cv2.imread(well_path, cv2.IMREAD_GRAYSCALE)
+        image = np.where(image==0, 255, image)
         image = cv2.resize(image, (82, 82))
         images.append(image)
     images = np.array(images)
@@ -29,6 +30,7 @@ def get_args():
     parser.add_argument('--max_trials', type=int, help='Number of different Keras models to try', default=100)
     parser.add_argument('--epochs', type=int, help='Number of epochs for the fit method', default=1000)
     parser.add_argument('--threads', type=int, help='Number of threads', required=True)
+    parser.add_argument('--val_split', type=float, help='Validation split', required=True)
     args = parser.parse_args()
     return args
 
@@ -36,16 +38,18 @@ def main():
     args = get_args()
     df = get_df_with_all_calls(args.training_data)
     df_pass = df[df.pass_or_fail == "PASS"]
+    df_pass = df_pass[df_pass.growth <= 1000]
+    # df_pass = df_pass[df_pass.growth > 0]
     df_pass_shuffled = df_pass.sample(frac=1)
     images = load_images(df_pass_shuffled)
     growths = df_pass_shuffled["growth"]
 
     # create regressor
     clf = ak.ImageRegressor(max_trials=args.max_trials, name=args.classifier_name,
-                            loss="mae", metrics=['mse', 'mae', 'mape'])
+                            loss="mae", metrics=['mse', 'mae', 'mape'], objective="val_mae")
 
     # train
-    clf.fit(images, growths, epochs=args.epochs, workers=args.threads)
+    clf.fit(images, growths, epochs=args.epochs, workers=args.threads, validation_split=args.val_split)
 
     # save to disk
     model = clf.export_model()
