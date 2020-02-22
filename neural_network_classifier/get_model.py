@@ -31,7 +31,7 @@ def get_args():
     parser.add_argument('--epochs', type=int, help='Number of epochs for the fit method', default=1000)
     parser.add_argument('--threads', type=int, help='Number of threads', required=True)
     parser.add_argument('--val_split', type=float, help='Validation split', required=True)
-    parser.add_argument('--resume', action="store_true", help='Resume previous training', required=True)
+    parser.add_argument('--resume', action="store_true", help='Resume previous training')
     args = parser.parse_args()
     return args
 
