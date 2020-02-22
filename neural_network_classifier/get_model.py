@@ -31,6 +31,7 @@ def get_args():
     parser.add_argument('--epochs', type=int, help='Number of epochs for the fit method', default=1000)
     parser.add_argument('--threads', type=int, help='Number of threads', required=True)
     parser.add_argument('--val_split', type=float, help='Validation split', required=True)
+    parser.add_argument('--resume', action="store_true", help='Resume previous training', required=True)
     args = parser.parse_args()
     return args
 
@@ -39,14 +40,14 @@ def main():
     df = get_df_with_all_calls(args.training_data)
     df_pass = df[df.pass_or_fail == "PASS"]
     df_pass = df_pass[df_pass.growth <= 1000]
-    # df_pass = df_pass[df_pass.growth > 0]
+    # df_pass = df_pass[df_pass.growth >= 20]
     df_pass_shuffled = df_pass.sample(frac=1)
     images = load_images(df_pass_shuffled)
     growths = df_pass_shuffled["growth"]
 
     # create regressor
     clf = ak.ImageRegressor(max_trials=args.max_trials, name=args.classifier_name,
-                            loss="mae", metrics=['mse', 'mae', 'mape'], objective="val_mae")
+                            loss="mae", metrics=['mse', 'mae', 'mape'], objective="val_mae", overwrite=not args.resume)
 
     # train
     clf.fit(images, growths, epochs=args.epochs, workers=args.threads, validation_split=args.val_split)
