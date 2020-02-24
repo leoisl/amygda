@@ -37,3 +37,4 @@ install:
 artifacts:
   - path: mykrobe.command_line.windows.${APPVEYOR_REPO_TAG_NAME}.tar.gz
     type: File
+
