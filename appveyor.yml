@@ -7,7 +7,7 @@ branches:
 
 environment:
     CYG_MIRROR: http://cygwin.mirror.constant.com
-    CYG_PACKAGES: make,unzip,automake,automake1.16,autoconf,autoconf2.5,zip,libbz2-devel,bzip2,xz,zlib,zlib-devel,python3,libtool,wget,liblzma-devel,libcurl-devel,R,libncurses-devel,python3-cython,python3-devel
+    CYG_PACKAGES: make,unzip,automake,automake1.16,autoconf,autoconf2.5,zip,libbz2-devel,bzip2,xz,zlib,zlib-devel,libtool,wget,liblzma-devel,libcurl-devel,R,libncurses-devel
     CYG_ROOT: C:\cygwin64
     CYG_CACHE: C:\cygwin64\var\cache\setup
     CYG_SETUP: setup-x86_64.exe
@@ -29,8 +29,8 @@ install:
   - SET PATH=%PYTHON%;%PATH%
   - ps: if (Test-Path Env:\CYG_ROOT) { Start-FileDownload "https://cygwin.com/$env:CYG_SETUP" -FileName "$env:CYG_SETUP" }
   - '%CYG_SETUP% --quiet-mode --no-shortcuts --only-site --root "%CYG_ROOT%" --site "%CYG_MIRROR%" --local-package-dir "%CYG_CACHE%" --packages "%CYG_PACKAGES%" --upgrade-also'
-  - '%PYTHON% -m ensurepip'
-  - '%PYTHON% -m pip install -r requirements.txt'
+  - 'python -m ensurepip'
+  - 'python -m pip install -r requirements.txt'
   - '%BASH% -lc "cd manual_annotator && bash build_executable.sh'
 
 
