@@ -13,7 +13,7 @@ environment:
     CYG_SETUP: setup-x86_64.exe
     BASH: C:\cygwin64\bin\bash
     CC: gcc
-    PYTHON: "C:/Python37"
+    PYTHON: "C:\\Python37"
 
 
 # Cache Cygwin/MSYS files to speed up build
@@ -29,8 +29,8 @@ install:
   - SET PATH=%PYTHON%;%PATH%
   - ps: if (Test-Path Env:\CYG_ROOT) { Start-FileDownload "https://cygwin.com/$env:CYG_SETUP" -FileName "$env:CYG_SETUP" }
   - '%CYG_SETUP% --quiet-mode --no-shortcuts --only-site --root "%CYG_ROOT%" --site "%CYG_MIRROR%" --local-package-dir "%CYG_CACHE%" --packages "%CYG_PACKAGES%" --upgrade-also'
-  - '%BASH% -lc "%PYTHON% -m ensurepip"'
-  - '%BASH% -lc "%PYTHON% -m pip install -r requirements.txt'
+  - '%PYTHON% -m ensurepip'
+  - '%PYTHON% -m pip install -r requirements.txt'
   - '%BASH% -lc "cd manual_annotator && bash build_executable.sh'
 
 
