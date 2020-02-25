@@ -7,7 +7,7 @@ from tpot import TPOTRegressor
 
 regressor_config_dict = {
     'sklearn.ensemble.GradientBoostingRegressor': {
-        'n_estimators': range(50, 500, 50),
+        'n_estimators': range(100, 501, 100),
         'loss': ["ls", "lad", "huber", "quantile"],
         'learning_rate': [1e-3, 1e-2, 1e-1, 0.25, 0.5, 0.75, 1.],
         'max_depth': range(1, 20),
