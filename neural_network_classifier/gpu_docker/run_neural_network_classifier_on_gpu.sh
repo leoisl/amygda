@@ -9,12 +9,12 @@ cuda_bins="/usr/local/cuda/bin"
 cuda_libs="/usr/local/cuda/lib64/"
 num_gpus=1
 gpu_opts="num=${num_gpus}:j_exclusive=yes"
-gpu_host="gpu74-v100-hosts"
+gpu_host="gpu-001 gpu-002 gpu-003 gpu-004 gpu-005 gpu-006 gpu-007 gpu-008"
 
 # configs that rarely change
-container="amygda_autokeras_gpu_0.0.1.sif"
+container="leandroishilima_amygda_autokeras_gpu_0.0.1-2020-02-26-394c9c0c3f01.sif"
 job_name="amygda_neural_network_gpu"
-mem=21000
+mem=30000
 
 # configs that change frequently
 max_trials=3
