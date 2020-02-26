@@ -32,7 +32,7 @@ bsub -R "select[mem>${mem}] rusage[mem=${mem}]" \
     -o "$job_name".o \
     -e "$job_name".e \
     -J "$job_name" \
-    -j "$num_cpus"
+    -n "$num_cpus"
     singularity exec \
         --bind "$cuda_bins" --bind "$cuda_libs"  \
         --nv \
