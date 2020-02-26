@@ -7,19 +7,20 @@ module load singularity/3.5.0
 # configs that dont change
 cuda_bins="/usr/local/cuda/bin"
 cuda_libs="/usr/local/cuda/lib64/"
-num_gpus=1
-gpu_opts="num=${num_gpus}:j_exclusive=yes"
-# gpu_host="gpu-001 gpu-002 gpu-003 gpu-004 gpu-005 gpu-006 gpu-007 gpu-008" # these have Quadro M6000
-gpu_host="gpu-009 gpu-010" # these have Tesla V100 (but gpu-011 has issues with container as of now)
 
 # configs that rarely change
 container="leandroishilima_amygda_autokeras_gpu_0.0.1-2020-02-26-394c9c0c3f01.sif"
 job_name="amygda_neural_network_gpu"
 mem=30000
+num_gpus=2
+gpu_opts="num=${num_gpus}:j_exclusive=yes"
+# gpu_host="gpu-001 gpu-002 gpu-003 gpu-004 gpu-005 gpu-006 gpu-007 gpu-008" # these have Quadro M6000
+gpu_host="gpu-009 gpu-010" # these have Tesla V100 (but gpu-011 has issues with container as of now)
+num_cpus=20
 
 # configs that change frequently
-max_trials=3
-epochs=3
+max_trials=10
+epochs=10
 val_split="0.2"
 seed=42
 
@@ -31,6 +32,7 @@ bsub -R "select[mem>${mem}] rusage[mem=${mem}]" \
     -o "$job_name".o \
     -e "$job_name".e \
     -J "$job_name" \
+    -j "$num_cpus"
     singularity exec \
         --bind "$cuda_bins" --bind "$cuda_libs"  \
         --nv \
@@ -41,4 +43,5 @@ bsub -R "select[mem>${mem}] rusage[mem=${mem}]" \
         --max_trials $max_trials \
         --epochs $epochs \
         --val_split $val_split \
-        --seed $seed
+        --seed $seed \
+        --threads $num_cpus

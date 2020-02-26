@@ -31,6 +31,7 @@ def get_args():
     parser.add_argument('--epochs', type=int, help='Number of epochs for the fit method', default=1000)
     parser.add_argument('--val_split', type=float, help='Validation split', required=True)
     parser.add_argument('--seed', type=int, help='Seed for reproducibility', required=True)
+    parser.add_argument('--threads', type=int, help='Number of threads', required=True)
     args = parser.parse_args()
     return args
 
@@ -49,7 +50,7 @@ def main():
                             loss="mae", metrics=['mse', 'mae', 'mape'], objective="val_mae", seed=args.seed)
 
     # train
-    clf.fit(images, growths, epochs=args.epochs, validation_split=args.val_split)
+    clf.fit(images, growths, epochs=args.epochs, validation_split=args.val_split, workers=args.threads, batch_size=512)
 
     # save to disk
     model = clf.export_model()
