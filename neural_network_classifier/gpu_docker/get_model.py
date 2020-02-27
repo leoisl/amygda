@@ -50,7 +50,7 @@ def main():
                             loss="mae", metrics=['mse', 'mae', 'mape'], objective="val_mae", seed=args.seed)
 
     # train
-    clf.fit(images, growths, epochs=args.epochs, validation_split=args.val_split, workers=args.threads, batch_size=512)
+    clf.fit(images, growths, epochs=args.epochs, validation_split=args.val_split, workers=args.threads)
 
     # save to disk
     model = clf.export_model()
