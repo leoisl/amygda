@@ -11,7 +11,6 @@ mem=40000
 num_gpus=1
 gpu_opts="num=${num_gpus}:j_exclusive=yes"
 gpu_host="gpu-009 gpu-010" # these have Tesla V100 (but gpu-011 has issues with container as of now)
-time_limit_in_minutes=44640 # 1 month
 
 # configs that change frequently
 max_trials=1000
@@ -27,7 +26,6 @@ bsub -R "select[mem>${mem}] rusage[mem=${mem}]" \
     -o "$job_name".o \
     -e "$job_name".e \
     -J "$job_name" \
-    -W "$time_limit_in_minutes" \
     singularity exec \
         --nv \
         "$container" \
