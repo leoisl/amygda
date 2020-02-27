@@ -12,15 +12,15 @@ cuda_libs="/usr/local/cuda/lib64/"
 container="leandroishilima_amygda_autokeras_gpu_0.0.1-2020-02-26-394c9c0c3f01.sif"
 job_name="amygda_neural_network_gpu"
 mem=30000
-num_gpus=2
+num_gpus=4
 gpu_opts="num=${num_gpus}:j_exclusive=yes"
 # gpu_host="gpu-001 gpu-002 gpu-003 gpu-004 gpu-005 gpu-006 gpu-007 gpu-008" # these have Quadro M6000
 gpu_host="gpu-009 gpu-010" # these have Tesla V100 (but gpu-011 has issues with container as of now)
-num_cpus=20
+num_cpus=50
 
 # configs that change frequently
-max_trials=10
-epochs=10
+max_trials=1000
+epochs=1000
 val_split="0.2"
 seed=42
 
