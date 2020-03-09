@@ -132,3 +132,5 @@ create_participants_dataset/data_filtered/
 
 participants_dataset
 manual_annotator/participants_datasets/
+
+neural_network_classifier/gpu_docker/sing_image/

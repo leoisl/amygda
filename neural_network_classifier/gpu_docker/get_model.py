@@ -9,6 +9,8 @@ import autokeras as ak
 def get_df_with_all_calls(path_to_outputs):
     all_csvs = glob.glob(f'{path_to_outputs}/*/*.csv')
     all_csvs = [csv for csv in all_csvs if not csv.endswith("training.csv")]
+    print("Training data:")
+    print("\n".join(all_csvs))
     all_dfs = [pd.read_csv(csv) for csv in all_csvs]
     df = pd.concat(all_dfs, ignore_index=True)
     return df
@@ -38,7 +40,7 @@ def main():
     args = get_args()
     df = get_df_with_all_calls(args.training_data)
     df_pass = df[df.pass_or_fail == "PASS"]
-    df_pass = df_pass[df_pass.growth <= 1000]
+    df_pass = df_pass[df_pass.growth <= 2000]
     # df_pass = df_pass[df_pass.growth >= 20]
     df_pass_shuffled = df_pass.sample(frac=1)
     images = load_images(df_pass_shuffled)
