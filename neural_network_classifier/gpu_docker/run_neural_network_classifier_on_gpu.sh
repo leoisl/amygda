@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# set -eux
+set -eux
 
 # make sure singularity v3 is being used
-# module load singularity/3.5.0
+module load singularity/3.5.0
 
 # configs that rarely change
 container="leandroishilima_amygda_autokeras_gpu_0.0.1-2020-02-26-394c9c0c3f01.sif"
@@ -23,7 +23,7 @@ do
   job_name="amygda_neural_network_gpu_iteration_${i}"
   seed=${i}
 
-  echo bsub -R "select[mem>${mem}] rusage[mem=${mem}]" \
+  bsub -R "select[mem>${mem}] rusage[mem=${mem}]" \
     -M "$mem" \
     -P gpu \
     -gpu "$gpu_opts" \
