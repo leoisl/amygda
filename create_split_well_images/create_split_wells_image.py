@@ -28,6 +28,9 @@ def append_if_there_is_no_value_close_enough(binned_values, value, difference_th
     binned_values.append(value)
 
 
+class CirclesError(Exception):
+    pass
+
 def sort_circles(b_circs):
     binned_x = []
     binned_y = []
@@ -36,8 +39,10 @@ def sort_circles(b_circs):
         append_if_there_is_no_value_close_enough(binned_y, circle[1], circle[2]/2)
     binned_x = sorted(binned_x)
     binned_y = sorted(binned_y)
-    assert len(binned_x) == 12, "We should have 12 x values"
-    assert len(binned_y) == 8, "We should have 8 x values"
+    if len(binned_x) != 12:
+        raise CirclesError(f"We should have 12 x values: {binned_x}")
+    if len(binned_y) != 8:
+        raise CirclesError(f"We should have 8 y values: {binned_y}")
     sorted_circles = [None] * 96
 
     for circle in b_circs:
@@ -47,18 +52,18 @@ def sort_circles(b_circs):
     return sorted_circles
 
 def get_circles(img):
-    b_r = 2
+    b_r = 1000000
     b_params = None
     b_circs = []
-    for bs in range(3, 7, 2):
-        for m in range(5, 10, 5):
+    for bs in range(1, 15, 2):
+        for m in range(1, 10, 2):
             grey = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
             grey = cv.GaussianBlur(grey, (bs, bs), m)
 
             for p1 in range(59, 70, 2):
                 for p2 in range(10, 25, 1):
-                    circs = cv.HoughCircles(grey, cv.HOUGH_GRADIENT, 1, 79, param1=p1, param2=p2, minRadius=38,
-                                            maxRadius=43)
+                    circs = cv.HoughCircles(grey, cv.HOUGH_GRADIENT, 1, 70, param1=p1, param2=p2, minRadius=35,
+                                            maxRadius=45)
 
                     if circs is not None:
                         if len(circs[0]) == 96:
@@ -69,6 +74,7 @@ def get_circles(img):
                                 b_params = (bs, m, p1, p2, np.average(radii))
                                 b_circs = circs[0]
 
+    assert len(b_circs)>0, "No circles found"
     b_circs = sort_circles(b_circs)
     return b_circs
 
@@ -131,6 +137,7 @@ def filter_image(plate_image):
 
 def split_plate_image_into_well_images_core(well_dir_for_this_plate, plate_image_filename, filter):
     plate_image = cv.imread(str(plate_image_filename))
+    plate_image = cv.resize(plate_image, (985, 665))
 
     if filter:
         plate_image = filter_image(plate_image)
