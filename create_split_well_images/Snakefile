@@ -14,16 +14,13 @@ def get_plate_name_to_plate_path(plate_dir):
     return {path.with_suffix('').name: str(path.resolve()) for path in all_plate_images_paths}
 
 plate_name_to_plate_path = get_plate_name_to_plate_path(config["plate_images"])
-# print(f"plate_name_to_plate_path = {plate_name_to_plate_path}")
 
 output_dir = Path(config["output_dir"])
 
 all_split_wells_dirs = []
-all_split_filtered_wells_dirs = []
 all_translation_csvs = []
 for plate_name in plate_name_to_plate_path.keys():
     all_split_wells_dirs.append(str(output_dir / f"{plate_name}_split"))
-    all_split_filtered_wells_dirs.append(str(output_dir / f"{plate_name}_split_filtered"))
     all_translation_csvs.append(str(output_dir / f"{plate_name}.translation.csv"))
 
 
@@ -38,7 +35,6 @@ rule split_well_images:
          raw_input = lambda wildcards: plate_name_to_plate_path[wildcards.plate_name]
     output:
          split_wells_dir = directory(output_dir / "{plate_name}_split"),
-         split_filtered_wells_dir = directory(output_dir / "{plate_name}_split_filtered"),
          translation_csv =  output_dir / "{plate_name}.translation.csv"
     threads: 1
     log: "logs/split_wells_image/{plate_name}.log"
@@ -76,9 +72,7 @@ rule concatenate_well_images:
                 original_plate_path_file = translation_csv["original_plate_path_file"][0]
                 anonymous_plate_path_dir_well_split = translation_csv["anonymous_plate_path_dir_well_split"][0]
                 new_anonymous_plate_path_dir_well_split = split_wells_dir_path.resolve()/f"{index_anonymous_plate}"
-                shutil.copytree(anonymous_plate_path_dir_well_split, new_anonymous_plate_path_dir_well_split)
-                shutil.copytree(str(anonymous_plate_path_dir_well_split)+"_filtered",
-                                str(new_anonymous_plate_path_dir_well_split)+"_filtered")
+                shutil.move(anonymous_plate_path_dir_well_split, new_anonymous_plate_path_dir_well_split)
 
                 dict_csv["original_plate_path_file"].append(str(original_plate_path_file))
                 dict_csv["anonymous_plate_path_dir_well_split"].append(str(new_anonymous_plate_path_dir_well_split))
@@ -86,5 +80,4 @@ rule concatenate_well_images:
                 index_anonymous_plate += 1
 
         df = pd.DataFrame.from_dict(dict_csv)
-        df["anonymous_plate_path_dir_well_split_filtered"] = df["anonymous_plate_path_dir_well_split"]+"_filtered"
         df.to_csv(output.translation_csv, index=False)

@@ -132,10 +132,10 @@ def filter_image(plate_image):
 def split_plate_image_into_well_images_core(well_dir_for_this_plate, plate_image_filename, filter):
     plate_image = cv.imread(str(plate_image_filename))
 
-    circles = get_circles(plate_image)
-
     if filter:
         plate_image = filter_image(plate_image)
+
+    circles = get_circles(plate_image)
 
     segments = segment_image(circles, plate_image)
     for well_label, segment in segments:
@@ -153,11 +153,8 @@ def split_plate_image_into_well_images(plate_image_filename, well_dir: Path, tra
     }
 
     try:
-        well_dir_filtered = Path(str(well_dir) + "_filtered")
         well_dir.mkdir(parents=True)
-        well_dir_filtered.mkdir(parents=True)
-        split_plate_image_into_well_images_core(well_dir, plate_image_filename, filter=False)
-        split_plate_image_into_well_images_core(well_dir_filtered, plate_image_filename, filter=True)
+        split_plate_image_into_well_images_core(well_dir, plate_image_filename, filter=True)
         dict_csv["original_plate_path_file"].append(plate_image_filename.resolve())
         dict_csv["anonymous_plate_path_dir_well_split"].append(well_dir.resolve())
     except:
