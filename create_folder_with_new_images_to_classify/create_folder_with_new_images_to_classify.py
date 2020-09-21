@@ -14,6 +14,8 @@ def get_args():
     parser.add_argument('--folder_with_new_images', type=str, help='Path to the folder with new images', required=True)
     parser.add_argument('--dry-run', help='Do not perform the copy, just print the commands.', default=False,
                         action="store_true")
+    parser.add_argument('--tsv', help='.csv is actually a .tsv', default=False,
+                        action="store_true")
     args = parser.parse_args()
     return args
 
@@ -22,8 +24,9 @@ def main():
     input_csv = args.input_csv
     folder_with_new_images = args.folder_with_new_images
     dry_run = args.dry_run
+    tsv = args.tsv
     os.makedirs(folder_with_new_images, exist_ok=True)
-    df = pd.read_csv(input_csv)
+    df = pd.read_csv(input_csv, sep="\t" if tsv else ",")
     df = df.dropna()
     for path in df.PATH:
         run_command(f"cp {path} {folder_with_new_images}", dry_run)
