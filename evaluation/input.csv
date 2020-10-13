@@ -1,0 +1,7 @@
+original_plate_path_file,plate_number,well,growth
+../examples/sample-images/01/image-01-raw.png,1,H12,10
+../examples/sample-images/01/image-01-raw.png,1,H11,20
+../examples/sample-images/02/image-02-raw.png,2,H12,30
+../examples/sample-images/02/image-02-raw.png,2,H11,40
+../examples/sample-images/03/image-03-raw.png,3,H12,50
+../examples/sample-images/03/image-03-raw.png,3,H11,60

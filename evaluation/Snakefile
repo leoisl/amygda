@@ -1,0 +1,171 @@
+from pathlib import Path
+import pandas as pd
+
+
+# ======================================================
+# Helper functions
+# ======================================================
+def update_to_absolute_path_core(path_series):
+    return path_series.apply(lambda path: str(Path(path).absolute()))
+def update_to_absolute_path(df, columns):
+    for column in columns:
+        df[column] = update_to_absolute_path_core(df[column])
+    return df
+
+
+# ======================================================
+# Config files
+# ======================================================
+configfile: "config.yaml"
+
+
+# ======================================================
+# Global vars
+# ======================================================
+input_csv = pd.read_csv(config["input_csv"])
+input_csv = update_to_absolute_path(input_csv, ["original_plate_path_file"])
+output_dir = config['output_dir']
+
+plate_name_to_plate_path = {}
+for plate_path in input_csv["original_plate_path_file"].unique():
+    plate_name = plate_path.split("/")[-1].replace("-raw.png", "")
+    plate_name_to_plate_path[plate_name] = plate_path
+
+amygda_outputs = []
+for plate_name, plate_path in plate_name_to_plate_path.items():
+    for amygda_name in ["amygda_paper", "amygda_prototype"]:
+        amygda_outputs.append(f"{output_dir}/{amygda_name}/{plate_name}")
+
+rule all:
+    input:
+         f"{output_dir}/output.csv"
+
+
+rule run_amygda_paper:
+    input:
+          plate_path = lambda wildcards: plate_name_to_plate_path[wildcards.plate_name]
+    output:
+          directory(f"{output_dir}/amygda_paper/{{plate_name}}")
+    threads: 1
+    resources:
+        mem_mb = lambda wildcards, attempt: 4000 * attempt
+    log:
+        "logs/run_amygda_paper/{plate_name}.log"
+    container:
+        "docker://leandroishilima/amygda:44d5729"
+    shell:
+         """
+         mkdir -p {output}
+         cp {input} {output}/
+         analyse-plate-with-amygda.py --image {output}/{wildcards.plate_name}
+         """
+
+
+def file_to_dict(filepath):
+    dictionary = {}
+    with open(filepath) as filehandler:
+        for line in filehandler:
+            line = line.strip()
+            if len(line)>0:
+                line_split = line.split()
+                dictionary[line_split[0]] = line_split[1]
+    return dictionary
+
+
+def get_mics(method):
+    return [f"{output_dir}/{method}/{plate_name}/{plate_name}-mics.txt" for plate_name in plate_name_to_plate_path.keys()]
+
+
+def aggregate_amygda_runs(method_name, output_file):
+    mics_input_files = get_mics(method_name)
+    image_filename = []
+    method = []
+    predicted_growth = []
+    well=[]
+
+    for mics_filepath in mics_input_files:
+        file_dictionary = file_to_dict(mics_filepath)
+        image_filename.append(file_dictionary["ImageFileName"])
+        method.append(method_name)
+        predicted_growth.append(file_dictionary["IM_POS1GROWTH"])
+        well.append("H11")
+
+        image_filename.append(file_dictionary["ImageFileName"])
+        method.append(method_name)
+        predicted_growth.append(file_dictionary["IM_POS2GROWTH"])
+        well.append("H12")
+
+    df = pd.DataFrame(data={
+        "image_filename": image_filename,
+        "method": method,
+        "predicted_growth": predicted_growth,
+        "well": well
+    })
+
+    df.to_csv(output_file, index=False)
+
+
+rule aggregate_run_amygda_paper_growths:
+    input:
+        dirs = expand(f"{output_dir}/amygda_paper/{{plate_name}}", plate_name=plate_name_to_plate_path.keys())
+    output:
+        aggregated_csv = f"{output_dir}/aggregated_runs_amygda_paper_growths.csv"
+    threads: 1
+    resources:
+        mem_mb = lambda wildcards, attempt: 2000 * attempt
+    log:
+        "logs/aggregate_run_amygda_paper_growths.log"
+    run:
+        aggregate_amygda_runs("amygda_paper", output.aggregated_csv)
+
+
+rule run_amygda_prototype:
+    input:
+          plate_path = lambda wildcards: plate_name_to_plate_path[wildcards.plate_name]
+    output:
+          directory(f"{output_dir}/amygda_prototype/{{plate_name}}")
+    threads: 1
+    resources:
+        mem_mb = lambda wildcards, attempt: 4000 * attempt
+    log:
+        "logs/run_amygda_prototype/{plate_name}.log"
+    container:
+        "docker://leandroishilima/amygda:23261ff"
+    shell:
+         """
+         mkdir -p {output}
+         cp {input} {output}/
+         analyse-plate-with-amygda.py --image {output}/{wildcards.plate_name}
+         """
+
+
+rule aggregate_run_amygda_prototype_growths:
+    input:
+        dirs = expand(f"{output_dir}/amygda_prototype/{{plate_name}}", plate_name=plate_name_to_plate_path.keys())
+    output:
+        aggregated_csv = f"{output_dir}/aggregated_runs_amygda_prototype_growths.csv"
+    threads: 1
+    resources:
+        mem_mb = lambda wildcards, attempt: 2000 * attempt
+    log:
+        "logs/aggregate_run_amygda_prototype_growths.log"
+    run:
+        aggregate_amygda_runs("amygda_prototype", output.aggregated_csv)
+
+
+rule concat_both_aggregated_csvs:
+    input:
+         aggregated_csv_amygda_paper     = rules.aggregate_run_amygda_paper_growths.output.aggregated_csv,
+         aggregated_csv_amygda_prototype = rules.aggregate_run_amygda_prototype_growths.output.aggregated_csv,
+    output:
+         concatenated_csv = f"{output_dir}/output.csv"
+    threads: 1
+    resources:
+        mem_mb = lambda wildcards, attempt: 2000 * attempt
+    log:
+        "logs/concat_both_aggregated_csvs.log"
+    run:
+        df_1 = pd.read_csv(input.aggregated_csv_amygda_paper)
+        df_2 = pd.read_csv(input.aggregated_csv_amygda_prototype)
+        concat_df = pd.concat([df_1, df_2])
+        concat_df.to_csv(output.concatenated_csv, index=False)

@@ -132,3 +132,7 @@ create_participants_dataset/data_filtered/
 
 participants_dataset
 manual_annotator/participants_datasets/
+/evaluation/logs/
+/evaluation/output/
+
+neural_network_classifier/gpu_docker/sing_image/leandroishilima_amygda_autokeras_gpu_0.0.1-2020-02-26-394c9c0c3f01.sif
