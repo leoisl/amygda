@@ -45,7 +45,8 @@ rule run_amygda_paper:
     input:
           plate_path = lambda wildcards: plate_name_to_plate_path[wildcards.plate_name]
     output:
-          directory(f"{output_dir}/amygda_paper/{{plate_name}}")
+          plate_dir = directory(f"{output_dir}/amygda_paper/{{plate_name}}"),
+          mics = f"{output_dir}/amygda_paper/{{plate_name}}/{{plate_name}}-mics.txt"
     threads: 1
     resources:
         mem_mb = lambda wildcards, attempt: 4000 * attempt
@@ -55,9 +56,9 @@ rule run_amygda_paper:
         "docker://leandroishilima/amygda:44d5729"
     shell:
          """
-         mkdir -p {output}
-         cp {input} {output}/
-         analyse-plate-with-amygda.py --image {output}/{wildcards.plate_name}
+         mkdir -p {output.plate_dir}
+         cp {input} {output.plate_dir}/
+         analyse-plate-with-amygda.py --image {output.plate_dir}/{wildcards.plate_name}
          """
 
 
@@ -123,7 +124,8 @@ rule run_amygda_prototype:
     input:
           plate_path = lambda wildcards: plate_name_to_plate_path[wildcards.plate_name]
     output:
-          directory(f"{output_dir}/amygda_prototype/{{plate_name}}")
+        plate_dir = directory(f"{output_dir}/amygda_prototype/{{plate_name}}"),
+        mics = f"{output_dir}/amygda_prototype/{{plate_name}}/{{plate_name}}-mics.txt"
     threads: 1
     resources:
         mem_mb = lambda wildcards, attempt: 4000 * attempt
@@ -133,9 +135,9 @@ rule run_amygda_prototype:
         "docker://leandroishilima/amygda:23261ff"
     shell:
          """
-         mkdir -p {output}
-         cp {input} {output}/
-         analyse-plate-with-amygda.py --image {output}/{wildcards.plate_name}
+         mkdir -p {output.plate_dir}
+         cp {input} {output.plate_dir}/
+         analyse-plate-with-amygda.py --image {output.plate_dir}/{wildcards.plate_name}
          """
 
 
