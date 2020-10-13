@@ -55,7 +55,7 @@ class PlateMeasurement(Treant):
         # remember whether we will be analysing and keeping the pixel intensities etc
         self.pixel_intensities=pixel_intensities
 
-        self.debug_images = f"{self.abspath}/debug_images/"
+        self.debug_images = f"{self.abspath}/{self.image_name}_debug_images/"
         os.makedirs(self.debug_images, exist_ok=True)
 
         self.histogram_files = []
