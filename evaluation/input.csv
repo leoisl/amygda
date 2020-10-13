@@ -1,7 +1,7 @@
-original_plate_path_file,plate_number,well,growth
-../examples/sample-images/01/image-01-raw.png,1,H12,10
-../examples/sample-images/01/image-01-raw.png,1,H11,20
-../examples/sample-images/02/image-02-raw.png,2,H12,30
-../examples/sample-images/02/image-02-raw.png,2,H11,40
-../examples/sample-images/03/image-03-raw.png,3,H12,50
-../examples/sample-images/03/image-03-raw.png,3,H11,60
+original_plate_path_file,image_filename,method,growth,well
+../examples/sample-images/01/image-01-raw.png,image-01,manual,10,H12
+../examples/sample-images/01/image-01-raw.png,image-01,manual,20,H11
+../examples/sample-images/02/image-02-raw.png,image-02,manual,30,H12
+../examples/sample-images/02/image-02-raw.png,image-02,manual,40,H11
+../examples/sample-images/03/image-03-raw.png,image-03,manual,50,H12
+../examples/sample-images/03/image-03-raw.png,image-03,manual,60,H11

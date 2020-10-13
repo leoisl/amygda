@@ -153,8 +153,9 @@ rule aggregate_run_amygda_prototype_growths:
         aggregate_amygda_runs("amygda_prototype", output.aggregated_csv)
 
 
-rule concat_both_aggregated_csvs:
+rule concat_all_aggregated_csvs:
     input:
+         input_csv = config["input_csv"],
          aggregated_csv_amygda_paper     = rules.aggregate_run_amygda_paper_growths.output.aggregated_csv,
          aggregated_csv_amygda_prototype = rules.aggregate_run_amygda_prototype_growths.output.aggregated_csv,
     output:
@@ -167,5 +168,6 @@ rule concat_both_aggregated_csvs:
     run:
         df_1 = pd.read_csv(input.aggregated_csv_amygda_paper)
         df_2 = pd.read_csv(input.aggregated_csv_amygda_prototype)
-        concat_df = pd.concat([df_1, df_2])
+        df_3 = pd.read_csv(input.input_csv)
+        concat_df = pd.concat([df_1, df_2, df_3])
         concat_df.to_csv(output.concatenated_csv, index=False)
