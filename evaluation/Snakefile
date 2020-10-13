@@ -80,25 +80,25 @@ def aggregate_amygda_runs(method_name, output_file):
     mics_input_files = get_mics(method_name)
     image_filename = []
     method = []
-    predicted_growth = []
+    growth = []
     well=[]
 
     for mics_filepath in mics_input_files:
         file_dictionary = file_to_dict(mics_filepath)
         image_filename.append(file_dictionary["ImageFileName"])
         method.append(method_name)
-        predicted_growth.append(file_dictionary["IM_POS1GROWTH"])
+        growth.append(file_dictionary["IM_POS1GROWTH"])
         well.append("H11")
 
         image_filename.append(file_dictionary["ImageFileName"])
         method.append(method_name)
-        predicted_growth.append(file_dictionary["IM_POS2GROWTH"])
+        growth.append(file_dictionary["IM_POS2GROWTH"])
         well.append("H12")
 
     df = pd.DataFrame(data={
         "image_filename": image_filename,
         "method": method,
-        "predicted_growth": predicted_growth,
+        "growth": growth,
         "well": well
     })
 
