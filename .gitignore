@@ -136,3 +136,13 @@ manual_annotator/participants_datasets/
 /evaluation/output/
 
 neural_network_classifier/gpu_docker/sing_image/leandroishilima_amygda_autokeras_gpu_0.0.1-2020-02-26-394c9c0c3f01.sif
+
+evaluation/build_input/all_plates.translation.csv
+
+evaluation/build_input/image_filenames_that_worked_on_both.csv
+
+evaluation/build_input/input_filtered.csv
+
+evaluation/build_input/input_unfiltered.csv
+
+evaluation/build_input/output_Einstein_second_lot_of_images_apr20_wells.csv
