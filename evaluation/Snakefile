@@ -53,7 +53,7 @@ rule run_amygda_paper:
     log:
         "logs/run_amygda_paper/{plate_name}.log"
     container:
-        "docker://leandroishilima/amygda:44d5729"
+        "docker://leandroishilima/amygda:031d83d"
     shell:
          """
          mkdir -p {output.plate_dir}
