@@ -465,7 +465,8 @@ class PlateMeasurement(Treant):
                         self.well_pixel_intensities[iy,ix].append(j)
 
                 # self.well_growth[iy,ix] = numpy.sum([rect_pixels<self.threshold_pixel],dtype=numpy.float64)/(rect.shape[0]*rect.shape[1])*100
-                self.well_growth[iy,ix] = numpy.sum([rect_pixels<self.threshold_pixel],dtype=numpy.float64)/(len(rect))*100
+                # self.well_growth[iy,ix] = numpy.sum([rect_pixels<self.threshold_pixel],dtype=numpy.float64)/(len(rect))*100
+                self.well_growth[iy, ix] = numpy.sum([rect_pixels < self.threshold_pixel], dtype=numpy.float64)  # measures pixel growth
 
         counter=1
         positive_control_growth_total=0.0
