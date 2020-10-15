@@ -661,7 +661,8 @@ class PlateMeasurement(Treant):
 
         nb_of_black_pixels_in_area_we_are_confident_it_is_growth = numpy.sum(nb_black_pixels_in_each_bin[:ring_limit])
         area_of_appropriate_hull = cv2.contourArea(appropriate_hull)
-        growth = nb_of_black_pixels_in_area_we_are_confident_it_is_growth / area_of_appropriate_hull * 100
+        # growth = nb_of_black_pixels_in_area_we_are_confident_it_is_growth / area_of_appropriate_hull * 100
+        growth = nb_of_black_pixels_in_area_we_are_confident_it_is_growth  # measure pixel growth instead of area growth
 
         print(f"histogram: {histogram}")
         print(f"nb_black_pixels_in_each_bin: {nb_black_pixels_in_each_bin}")
