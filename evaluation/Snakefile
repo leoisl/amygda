@@ -132,7 +132,7 @@ rule run_amygda_prototype:
     log:
         "logs/run_amygda_prototype/{plate_name}.log"
     container:
-        "docker://leandroishilima/amygda:23261ff"
+        "docker://leandroishilima/amygda:219c80e"
     shell:
          """
          mkdir -p {output.plate_dir}
