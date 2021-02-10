@@ -557,11 +557,13 @@ class PlateMeasurement(Treant):
         top = max(top, 30)
         ax.set_ylim(0, top)
 
-    def add_images_to_plot(self, fig, images_filenames):
+    def add_images_to_plot(self, fig, images_filenames, images_description):
         for index, image_filename in enumerate(images_filenames):
             image = cv2.imread(image_filename)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            ax = fig.add_axes([0.05 + 0.05 * index, 0.8, 0.2, 0.2])
+            cv2.putText(image, images_description[index], (0, 17),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255,0,0), 2)
+            ax = fig.add_axes([0.05 + 0.075 * index, 0.8, 0.2, 0.2])
             ax.imshow(image)
             ax.axis("off")
 
@@ -685,13 +687,26 @@ class PlateMeasurement(Treant):
         self.add_histogram_to_fig(ax, distances_of_black_pixels_to_center_of_hull)
         self.add_images_to_plot(fig,
                                 [
+                                    f'{filename.replace("_cropped", ".raw.png")}',
                                     f'{filename.replace("_cropped", ".raw.padded.png")}',
-                                    f'{filename.replace("_cropped", ".second_and_third_largest_hulls.png")}',
-                                    f'{filename.replace("_cropped", ".third_largest_hull_cropped.png")}',
+                                    f'{filename.replace("_cropped", ".raw.padded_with_circles.png")}',
+                                    f'{filename.replace("_cropped", ".inner_outer_contours.png")}',
                                     f'{filename}.options_hulls.png',
+                                    f'{filename}.chosen_hull.png',
                                     f'{filename}.chosen_hull.cropped.png',
                                     f'{filename}.chosen_hull.cropped.bubbles_removed.png',
                                     f'{filename}.chosen_hull.cropped.binary_fixed.png',
+                                ],
+                                [
+                                    "Raw",
+                                    "Padded",
+                                    "Well circle",
+                                    "Contours",
+                                    "2&3rd hull",
+                                    "Chosen hull",
+                                    "Cropped hull",
+                                    "Bubble removal",
+                                    "Binarised"
                                 ])
 
         plt.savefig(f'{filename}.histogram.png')
@@ -960,7 +975,7 @@ class PlateMeasurement(Treant):
                 self.process_well(iy, ix, c_param, add_to_report=True)
 
         # print(self.well_growth)
-        # self.output_final_report()
+        self.output_final_report()
 
         counter=1
         positive_control_growth_total=0.0
